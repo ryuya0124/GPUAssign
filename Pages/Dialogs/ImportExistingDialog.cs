@@ -144,9 +144,13 @@ public sealed class ImportExistingDialog : ContentDialog
                 }
             };
 
+            var displayPath = app.IsStoreApp
+                ? (string.IsNullOrEmpty(app.ExeName) ? "Microsoft Store アプリ" : app.ExeName)
+                : (app.CurrentExePath ?? app.SearchPath);
+
             var pathText = new TextBlock
             {
-                Text         = app.CurrentExePath ?? app.SearchPath,
+                Text         = displayPath,
                 FontSize     = 11,
                 Opacity      = 0.65,
                 TextTrimming = TextTrimming.CharacterEllipsis,
@@ -181,13 +185,14 @@ public sealed class ImportExistingDialog : ContentDialog
     {
         foreach (var (_, app, img) in _rows)
         {
-            var targetExe = app.CurrentExePath ?? app.SearchPath;
-            if (!string.IsNullOrEmpty(targetExe))
+            var target = app.IsStoreApp ? app.ExeName : (app.CurrentExePath ?? app.SearchPath);
+            if (!string.IsNullOrEmpty(target))
             {
-                var icon = await IconService.GetAppIconAsync(targetExe);
+                var icon = await IconService.GetAppIconAsync(target);
                 if (icon != null)
                 {
                     img.Source = icon;
+                    app.IconSource = icon;
                 }
             }
         }
@@ -208,13 +213,14 @@ public sealed class ImportExistingDialog : ContentDialog
                 SelectedApps.Add(new AppDefinition
                 {
                     Name          = app.Name,
-                    Category      = "Windows設定からインポート",
+                    Category      = app.Category,
                     SearchPath    = app.SearchPath,
                     ExeName       = app.ExeName,
                     SearchMode    = app.SearchMode,
                     Recursive     = app.Recursive,
                     GpuPreference = app.GpuPreference,
                     CurrentExePath = app.CurrentExePath,
+                    IconSource    = app.IconSource,
                     ManagedPaths  = new List<string>(app.ManagedPaths)
                 });
             }

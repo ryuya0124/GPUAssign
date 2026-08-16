@@ -122,8 +122,15 @@ public static class GpuPreferenceService
                 var exeName = Path.GetFileName(keyName);
                 var dirName = Path.GetDirectoryName(keyName) ?? string.Empty;
 
-                // Determine display name from FileVersionInfo if file exists
+                // Determine display name (check FileVersionInfo, then StoreAppService if under WindowsApps)
                 string win32AppName = Path.GetFileNameWithoutExtension(keyName);
+                if (keyName.Contains("WindowsApps", StringComparison.OrdinalIgnoreCase))
+                {
+                    var storeName = StoreAppService.GetStoreAppDisplayName(keyName);
+                    if (!string.IsNullOrWhiteSpace(storeName) && storeName != win32AppName)
+                        win32AppName = storeName;
+                }
+
                 if (File.Exists(keyName))
                 {
                     try
