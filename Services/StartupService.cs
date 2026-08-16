@@ -25,11 +25,17 @@ public static class StartupService
         RunProcess("schtasks.exe", args);
     }
 
-    /// <summary>Remove the logon task.</summary>
     public static void DisableStartupTask()
     {
         try { RunProcess("schtasks.exe", $"/Delete /TN \"{TaskName}\" /F"); }
         catch { /* task might not exist */ }
+
+        try
+        {
+            using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, true);
+            key?.DeleteValue(RunKeyName, false);
+        }
+        catch { /* ignore */ }
     }
 
     public static bool IsStartupEnabled()
