@@ -20,7 +20,7 @@ public static class GpuPreferenceService
     private static readonly Regex VersionDirRegex =
         new(@"[\\/](\d+\.\d+\.\d+(?:\.\d+)?|[a-zA-Z]*-\d+\.\d+\.\d+)[\\/]", RegexOptions.Compiled);
 
-    /// <summary>Read the GPU preference currently stored for the given EXE path.</summary>
+    /// <summary>Read the GPU preference currently stored for the given EXE path or Store App ID.</summary>
     public static GpuPreference? GetPreference(string exePath)
     {
         try
@@ -34,7 +34,7 @@ public static class GpuPreferenceService
         catch { return null; }
     }
 
-    /// <summary>Write the GPU preference for the given EXE path.</summary>
+    /// <summary>Write the GPU preference for the given EXE path or Store App ID.</summary>
     public static void SetPreference(string exePath, GpuPreference preference)
     {
         using var key = Registry.CurrentUser.CreateSubKey(RegKeyPath, writable: true);
@@ -42,7 +42,7 @@ public static class GpuPreferenceService
         key.SetValue(exePath, value, RegistryValueKind.String);
     }
 
-    /// <summary>Remove the GPU preference entry for the given EXE path.</summary>
+    /// <summary>Remove the GPU preference entry for the given EXE path or Store App ID.</summary>
     public static void RemovePreference(string exePath)
     {
         try
@@ -53,7 +53,7 @@ public static class GpuPreferenceService
         catch { /* ignore */ }
     }
 
-    /// <summary>Return all EXE paths currently registered in UserGpuPreferences.</summary>
+    /// <summary>Return all entries currently registered in UserGpuPreferences.</summary>
     public static Dictionary<string, GpuPreference> GetAllPreferences()
     {
         var result = new Dictionary<string, GpuPreference>(StringComparer.OrdinalIgnoreCase);
@@ -64,6 +64,10 @@ public static class GpuPreferenceService
 
             foreach (var name in key.GetValueNames())
             {
+                // Skip global system settings
+                if (string.Equals(name, "DirectXUserGlobalSettings", StringComparison.OrdinalIgnoreCase))
+                    continue;
+
                 var raw = key.GetValue(name) as string;
                 var pref = ParsePreference(raw);
                 if (pref.HasValue)
@@ -77,36 +81,64 @@ public static class GpuPreferenceService
     /// <summary>
     /// Scans all existing GPU preferences set in Windows Settings and converts them
     /// into smart AppDefinition objects ready for import.
+    /// Recognizes both regular Win32 EXEs and Microsoft Store (packaged) apps.
     /// </summary>
     public static List<AppDefinition> ScanExistingWindowsPreferences()
     {
         var existing = GetAllPreferences();
         var list = new List<AppDefinition>();
 
-        foreach (var (fullExePath, gpuPref) in existing)
+        foreach (var (keyName, gpuPref) in existing)
         {
             try
             {
-                var exeName = Path.GetFileName(fullExePath);
-                var dirName = Path.GetDirectoryName(fullExePath) ?? string.Empty;
+                // 1. Check if this is a Microsoft Store (UWP/AUMID) package entry
+                bool isStoreApp = !keyName.Contains('\\') && !keyName.Contains('/') &&
+                                  (keyName.Contains('!') || keyName.Contains('_'));
 
-                // Determine display name
-                string appName = Path.GetFileNameWithoutExtension(fullExePath);
-                if (File.Exists(fullExePath))
+                if (isStoreApp)
+                {
+                    // Format readable display name from AUMID (e.g. OpenAI.ChatGPT-Desktop_2p2nqsd0c76g0!ChatGPT)
+                    string appName = FormatStoreAppName(keyName);
+
+                    var storeAppDef = new AppDefinition
+                    {
+                        Name           = appName,
+                        Category       = "Microsoft Store アプリ",
+                        SearchPath     = "(Microsoft Store アプリ - パス指定不要)",
+                        ExeName        = keyName,
+                        SearchMode     = SearchMode.StoreApp,
+                        Recursive      = false,
+                        GpuPreference  = gpuPref,
+                        CurrentExePath = keyName,
+                        ManagedPaths   = new List<string> { keyName }
+                    };
+
+                    list.Add(storeAppDef);
+                    continue;
+                }
+
+                // 2. Standard Win32 EXE path
+                var exeName = Path.GetFileName(keyName);
+                var dirName = Path.GetDirectoryName(keyName) ?? string.Empty;
+
+                // Determine display name from FileVersionInfo if file exists
+                string win32AppName = Path.GetFileNameWithoutExtension(keyName);
+                if (File.Exists(keyName))
                 {
                     try
                     {
-                        var info = FileVersionInfo.GetVersionInfo(fullExePath);
+                        var info = FileVersionInfo.GetVersionInfo(keyName);
                         if (!string.IsNullOrWhiteSpace(info.FileDescription))
-                            appName = info.FileDescription;
+                            win32AppName = info.FileDescription;
                         else if (!string.IsNullOrWhiteSpace(info.ProductName))
-                            appName = info.ProductName;
+                            win32AppName = info.ProductName;
                     }
                     catch { }
                 }
 
-                // Analyze versioned structure (e.g. LINE\bin\26.4.0.3944\LINE.exe or Discord\app-1.0.9253\Discord.exe)
-                var versionMatch = VersionDirRegex.Match(fullExePath);
+                // Analyze versioned folder structure (e.g. LINE\bin\26.4.0.3944\LINE.exe or Discord\app-1.0.9253\Discord.exe)
+                var versionMatch = VersionDirRegex.Match(keyName);
                 SearchMode mode = SearchMode.Fixed;
                 string searchPath = dirName;
                 bool recursive = false;
@@ -117,7 +149,7 @@ public static class GpuPreferenceService
                     if (versionSegment.StartsWith("app-", StringComparison.OrdinalIgnoreCase))
                     {
                         // Discord / Squirrel style (app-1.0.9xxx) -> Glob pattern
-                        var parentDir = fullExePath.Substring(0, versionMatch.Index);
+                        var parentDir = keyName.Substring(0, versionMatch.Index);
                         searchPath = Path.Combine(parentDir, "app-*");
                         mode = SearchMode.Glob;
                         recursive = false;
@@ -125,7 +157,7 @@ public static class GpuPreferenceService
                     else
                     {
                         // SemVer folder style (LINE etc.) -> LatestVersion recursive
-                        var parentDir = fullExePath.Substring(0, versionMatch.Index);
+                        var parentDir = keyName.Substring(0, versionMatch.Index);
                         searchPath = parentDir;
                         mode = SearchMode.LatestVersion;
                         recursive = true;
@@ -137,15 +169,15 @@ public static class GpuPreferenceService
 
                 var appDef = new AppDefinition
                 {
-                    Name          = appName,
-                    Category      = "Windows設定からインポート",
-                    SearchPath    = searchPath,
-                    ExeName       = exeName,
-                    SearchMode    = mode,
-                    Recursive     = recursive,
-                    GpuPreference = gpuPref,
-                    CurrentExePath = fullExePath,
-                    ManagedPaths  = new List<string> { fullExePath }
+                    Name           = win32AppName,
+                    Category       = "Windows設定からインポート",
+                    SearchPath     = searchPath,
+                    ExeName        = exeName,
+                    SearchMode     = mode,
+                    Recursive      = recursive,
+                    GpuPreference  = gpuPref,
+                    CurrentExePath = keyName,
+                    ManagedPaths   = new List<string> { keyName }
                 };
 
                 list.Add(appDef);
@@ -154,6 +186,43 @@ public static class GpuPreferenceService
         }
 
         return list;
+    }
+
+    /// <summary>Format a user-friendly name from an AUMID string.</summary>
+    private static string FormatStoreAppName(string aumid)
+    {
+        // Examples:
+        // Microsoft.Windows.Photos_8wekyb3d8bbwe!App -> Microsoft.Windows.Photos
+        // OpenAI.ChatGPT-Desktop_2p2nqsd0c76g0!ChatGPT -> ChatGPT (Desktop)
+        // AppleInc.AppleMusicWin_nzyj5cx40ttqa!App -> AppleMusicWin
+        try
+        {
+            var raw = aumid;
+            var bangIdx = raw.IndexOf('!');
+            var appPart = bangIdx >= 0 ? raw[(bangIdx + 1)..] : string.Empty;
+            var pfnPart = bangIdx >= 0 ? raw[..bangIdx] : raw;
+
+            var underscoreIdx = pfnPart.IndexOf('_');
+            var baseName = underscoreIdx >= 0 ? pfnPart[..underscoreIdx] : pfnPart;
+
+            if (baseName.StartsWith("Microsoft.Windows.", StringComparison.OrdinalIgnoreCase))
+                return baseName["Microsoft.Windows.".Length..];
+
+            if (baseName.StartsWith("Microsoft.", StringComparison.OrdinalIgnoreCase))
+                return baseName["Microsoft.".Length..];
+
+            if (baseName.StartsWith("AppleInc.", StringComparison.OrdinalIgnoreCase))
+                return baseName["AppleInc.".Length..];
+
+            if (baseName.StartsWith("OpenAI.", StringComparison.OrdinalIgnoreCase))
+                return baseName["OpenAI.".Length..];
+
+            return baseName;
+        }
+        catch
+        {
+            return aumid;
+        }
     }
 
     /// <summary>Compress absolute path segments into standard Windows environment variables.</summary>

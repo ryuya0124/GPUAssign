@@ -95,7 +95,7 @@ public sealed partial class AppsPage : Page
     private void AppListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         _selectedApp = AppListView.SelectedItem as AppDefinition;
-        OpenFolderButton.IsEnabled = _selectedApp is not null;
+        OpenFolderButton.IsEnabled = _selectedApp is not null && !_selectedApp.IsStoreApp;
         EditButton.IsEnabled       = _selectedApp is not null;
         DeleteButton.IsEnabled     = _selectedApp is not null;
     }
@@ -108,12 +108,12 @@ public sealed partial class AppsPage : Page
         {
             ConfigService.Save(_config);
 
-            // If app already has a known target EXE, update registry immediately
-            if (!string.IsNullOrEmpty(app.CurrentExePath) && File.Exists(app.CurrentExePath))
+            var targetKey = app.IsStoreApp ? app.ExeName : app.CurrentExePath;
+            if (!string.IsNullOrEmpty(targetKey) && (app.IsStoreApp || File.Exists(targetKey)))
             {
                 try
                 {
-                    GpuPreferenceService.SetPreference(app.CurrentExePath, app.GpuPreference);
+                    GpuPreferenceService.SetPreference(targetKey, app.GpuPreference);
                     app.SyncStatus = SyncStatus.Synced;
                 }
                 catch { }
@@ -126,6 +126,12 @@ public sealed partial class AppsPage : Page
     private void OpenFolderButton_Click(object sender, RoutedEventArgs e)
     {
         if (_selectedApp is null) return;
+
+        if (_selectedApp.IsStoreApp)
+        {
+            ShowStatus(InfoBarSeverity.Informational, "Microsoft Store アプリ", "Microsoft Store アプリのためフォルダパスはありません。");
+            return;
+        }
 
         try
         {

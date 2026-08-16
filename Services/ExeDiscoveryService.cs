@@ -38,6 +38,7 @@ public static class ExeDiscoveryService
             SearchMode.LatestVersion => FindLatestVersion(app),
             SearchMode.Glob          => FindGlob(app),
             SearchMode.Regex         => FindRegex(app),
+            SearchMode.StoreApp      => string.IsNullOrEmpty(app.ExeName) ? new() : new() { app.ExeName },
             _                        => FindLatestVersion(app)
         };
     }

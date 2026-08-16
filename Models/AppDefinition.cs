@@ -31,7 +31,10 @@ public enum SearchMode
     Glob = 2,
 
     /// <summary>Recursively search searchPath for files whose full path matches the regex in exe.</summary>
-    Regex = 3
+    Regex = 3,
+
+    /// <summary>Microsoft Store / UWP packaged app (identified by PackageFamilyName!AppId, no file path required).</summary>
+    StoreApp = 4
 }
 
 /// <summary>Sync status of an app entry</summary>
@@ -79,13 +82,13 @@ public class AppDefinition : INotifyPropertyChanged
     /// Base directory to search (env vars like %LOCALAPPDATA% are expanded).
     /// For Glob mode this may contain * / ? in directory segments.
     /// For Fixed mode this is the directory containing the exe.
+    /// For StoreApp mode this is empty.
     /// </summary>
     [JsonPropertyName("searchPath")]
     public string SearchPath { get; set; } = string.Empty;
 
     /// <summary>
-    /// EXE filename. For Glob mode may contain * ?.
-    /// For Regex mode this is the regex pattern applied to the full path.
+    /// EXE filename (or PackageFamilyName!AppId for StoreApp mode).
     /// </summary>
     [JsonPropertyName("exe")]
     public string ExeName { get; set; } = string.Empty;
@@ -120,6 +123,9 @@ public class AppDefinition : INotifyPropertyChanged
     public List<string> ManagedPaths { get; set; } = new();
 
     // ---- Runtime-only (not persisted) ----
+
+    [JsonIgnore]
+    public bool IsStoreApp => SearchMode == SearchMode.StoreApp;
 
     [JsonIgnore]
     public int GpuIndex
@@ -203,6 +209,7 @@ public class AppDefinition : INotifyPropertyChanged
         SearchMode.LatestVersion => L.Get("searchMode.latestVersion"),
         SearchMode.Glob          => L.Get("searchMode.glob"),
         SearchMode.Regex         => L.Get("searchMode.regex"),
+        SearchMode.StoreApp      => "Microsoft Store",
         _                        => SearchMode.ToString()
     };
 }

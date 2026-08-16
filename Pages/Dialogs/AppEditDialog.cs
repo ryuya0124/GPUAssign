@@ -33,6 +33,8 @@ public sealed class AppEditDialog : ContentDialog
     private readonly TextBlock    _previewText;
     private readonly TextBlock    _modeHintText;
     private readonly TextBlock    _exeLabelText;
+    private readonly StackPanel   _searchPathSection;
+    private readonly Border       _previewCard;
 
     private readonly Button       _openFolderBtn;
     private readonly Button       _testDiscoveryBtn;
@@ -115,6 +117,12 @@ public sealed class AppEditDialog : ContentDialog
         };
         _openFolderBtn.Click += OpenFolderBtn_Click;
 
+        _searchPathSection = new StackPanel
+        {
+            Spacing = 2,
+            Children = { _searchPathBox, pathHint, _openFolderBtn }
+        };
+
         _exeLabelText = new TextBlock
         {
             Text   = L.Get("field.exe"),
@@ -169,28 +177,27 @@ public sealed class AppEditDialog : ContentDialog
 
         _testProgressRing = new ProgressRing
         {
-            Width = 18,
-            Height = 18,
+            Width = 20,
+            Height = 20,
             IsActive = false,
             Visibility = Visibility.Collapsed
         };
 
         _testResultText = new TextBlock
         {
-            Text = "",
-            FontSize = 12,
+            FontSize     = 12,
             TextWrapping = TextWrapping.Wrap,
-            VerticalAlignment = VerticalAlignment.Center
+            Margin       = new Thickness(0, 4, 0, 0)
         };
 
         var testActionRow = new StackPanel
         {
             Orientation = Orientation.Horizontal,
-            Spacing = 8,
+            Spacing     = 10,
             Children = { _testDiscoveryBtn, _openDetectedExeBtn, _testProgressRing }
         };
 
-        var previewCard = new Border
+        _previewCard = new Border
         {
             Padding         = new Thickness(14),
             CornerRadius    = new CornerRadius(8),
@@ -220,11 +227,11 @@ public sealed class AppEditDialog : ContentDialog
         panel.Children.Add(_nameBox);
         panel.Children.Add(_categoryBox);
         panel.Children.Add(new StackPanel { Spacing = 4, Children = { _searchModeCombo, _modeHintText } });
-        panel.Children.Add(new StackPanel { Spacing = 2, Children = { _searchPathBox, pathHint, _openFolderBtn } });
+        panel.Children.Add(_searchPathSection);
         panel.Children.Add(exeSection);
         panel.Children.Add(_recursiveToggle);
         panel.Children.Add(_gpuComboBox);
-        panel.Children.Add(previewCard);
+        panel.Children.Add(_previewCard);
 
         Content = new ScrollViewer
         {
@@ -257,23 +264,44 @@ public sealed class AppEditDialog : ContentDialog
             SearchMode.LatestVersion => L.Get("searchMode.latestVersion.hint"),
             SearchMode.Glob          => L.Get("searchMode.glob.hint"),
             SearchMode.Regex         => L.Get("searchMode.regex.hint"),
+            SearchMode.StoreApp      => "Microsoft Store / UWP アプリです。パス指定は不要で、パッケージ識別子(AUMID)で管理されます。",
             _                        => string.Empty
         };
 
-        _exeLabelText.Text = mode == SearchMode.Regex
-            ? $"{L.Get("field.exe")} (正規表現パターン)"
-            : L.Get("field.exe");
-
-        _recursiveToggle.Visibility = mode is SearchMode.LatestVersion or SearchMode.Regex
-            ? Visibility.Visible : Visibility.Collapsed;
+        if (mode == SearchMode.StoreApp)
+        {
+            _searchPathSection.Visibility = Visibility.Collapsed;
+            _previewCard.Visibility       = Visibility.Collapsed;
+            _recursiveToggle.Visibility   = Visibility.Collapsed;
+            _exeLabelText.Text            = "パッケージ識別子 (AUMID / PackageFamilyName)";
+            _exeNameBox.PlaceholderText   = "例: Microsoft.Windows.Photos_8wekyb3d8bbwe!App";
+        }
+        else
+        {
+            _searchPathSection.Visibility = Visibility.Visible;
+            _previewCard.Visibility       = Visibility.Visible;
+            _recursiveToggle.Visibility   = mode is SearchMode.LatestVersion or SearchMode.Regex
+                ? Visibility.Visible : Visibility.Collapsed;
+            _exeLabelText.Text            = mode == SearchMode.Regex
+                ? $"{L.Get("field.exe")} (正規表現パターン)"
+                : L.Get("field.exe");
+            _exeNameBox.PlaceholderText   = L.Get("field.exe.placeholder");
+        }
 
         UpdatePreview();
+        Validate();
     }
 
     private void UpdatePreview()
     {
         try
         {
+            if (SelectedMode == SearchMode.StoreApp)
+            {
+                _previewText.Text = _exeNameBox.Text.Trim();
+                return;
+            }
+
             var expanded = ExeDiscoveryService.ExpandPath(_searchPathBox.Text.Trim());
             var exe      = _exeNameBox.Text.Trim();
 
@@ -291,10 +319,19 @@ public sealed class AppEditDialog : ContentDialog
 
     private void Validate()
     {
-        IsPrimaryButtonEnabled =
-            !string.IsNullOrWhiteSpace(_nameBox.Text) &&
-            !string.IsNullOrWhiteSpace(_searchPathBox.Text) &&
-            !string.IsNullOrWhiteSpace(_exeNameBox.Text);
+        if (SelectedMode == SearchMode.StoreApp)
+        {
+            IsPrimaryButtonEnabled =
+                !string.IsNullOrWhiteSpace(_nameBox.Text) &&
+                !string.IsNullOrWhiteSpace(_exeNameBox.Text);
+        }
+        else
+        {
+            IsPrimaryButtonEnabled =
+                !string.IsNullOrWhiteSpace(_nameBox.Text) &&
+                !string.IsNullOrWhiteSpace(_searchPathBox.Text) &&
+                !string.IsNullOrWhiteSpace(_exeNameBox.Text);
+        }
     }
 
     private void OpenFolderBtn_Click(object sender, RoutedEventArgs e)
@@ -302,7 +339,6 @@ public sealed class AppEditDialog : ContentDialog
         try
         {
             var path = ExeDiscoveryService.ExpandPath(_searchPathBox.Text.Trim());
-            // If path contains wildcard, get parent directory before wildcard
             if (path.Contains('*') || path.Contains('?'))
             {
                 var wildIdx = path.IndexOfAny(new[] { '*', '?' });
@@ -345,7 +381,6 @@ public sealed class AppEditDialog : ContentDialog
             Recursive  = _recursiveToggle.IsOn
         };
 
-        // Run heavy EXE discovery on background thread to keep UI completely responsive
         var (bestMatch, allMatches) = await Task.Run(() =>
         {
             var matches = ExeDiscoveryService.FindAllMatches(tempApp);
@@ -376,7 +411,6 @@ public sealed class AppEditDialog : ContentDialog
         if (string.IsNullOrEmpty(_lastDetectedExePath) || !File.Exists(_lastDetectedExePath)) return;
         try
         {
-            // Select the EXE file in explorer
             Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{_lastDetectedExePath}\"") { UseShellExecute = true });
         }
         catch { }
@@ -386,7 +420,7 @@ public sealed class AppEditDialog : ContentDialog
     {
         _editing.Name       = _nameBox.Text.Trim();
         _editing.Category   = _categoryBox.Text.Trim();
-        _editing.SearchPath = _searchPathBox.Text.Trim();
+        _editing.SearchPath = SelectedMode == SearchMode.StoreApp ? string.Empty : _searchPathBox.Text.Trim();
         _editing.ExeName    = _exeNameBox.Text.Trim();
         _editing.Recursive  = _recursiveToggle.IsOn;
         _editing.SearchMode = SelectedMode;
@@ -410,6 +444,7 @@ public sealed class AppEditDialog : ContentDialog
         SearchMode.LatestVersion => L.Get("searchMode.latestVersion"),
         SearchMode.Glob          => L.Get("searchMode.glob"),
         SearchMode.Regex         => L.Get("searchMode.regex"),
+        SearchMode.StoreApp      => "Microsoft Store アプリ",
         _                        => mode.ToString()
     };
 }
