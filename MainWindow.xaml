@@ -38,6 +38,7 @@
             Grid.Row="1"
             IsBackButtonVisible="Collapsed"
             IsPaneToggleButtonVisible="False"
+            IsSettingsVisible="False"
             PaneDisplayMode="Left"
             SelectionChanged="NavView_SelectionChanged">
 
@@ -73,18 +74,6 @@
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.MenuItems>
-
-            <NavigationView.FooterMenuItems>
-                <!-- Settings -->
-                <NavigationViewItem
-                    x:Name="NavSettings"
-                    Content="設定"
-                    Tag="settings">
-                    <NavigationViewItem.Icon>
-                        <FontIcon Glyph="&#xE713;" />
-                    </NavigationViewItem.Icon>
-                </NavigationViewItem>
-            </NavigationView.FooterMenuItems>
 
             <Frame x:Name="NavFrame" />
         </NavigationView>
