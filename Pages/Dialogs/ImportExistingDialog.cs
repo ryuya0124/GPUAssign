@@ -21,8 +21,8 @@ public sealed class ImportExistingDialog : ContentDialog
 
     public ImportExistingDialog(List<AppDefinition> detectedApps)
     {
-        Title             = "Windows既存設定からインポート";
-        PrimaryButtonText = "選択したアプリを取り込む";
+        Title             = L.Get("dialog.import.title");
+        PrimaryButtonText = L.Get("action.importSelected");
         CloseButtonText   = L.Get("action.cancel");
         DefaultButton     = ContentDialogButton.Primary;
         IsPrimaryButtonEnabled = detectedApps.Count > 0;
@@ -38,15 +38,15 @@ public sealed class ImportExistingDialog : ContentDialog
 
         outer.Children.Add(new TextBlock
         {
-            Text         = "Windowsのグラフィックス設定で登録されているアプリを検出しました。\n管理対象にするアプリを選択してください (バージョンフォルダは自動でルール化されます):",
+            Text         = L.Get("dialog.import.desc"),
             TextWrapping = TextWrapping.Wrap,
             Opacity      = 0.8,
             FontSize     = 12
         });
 
         var selectAllRow = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 12 };
-        var selectAllBtn = new Button { Content = "すべて選択", FontSize = 12 };
-        var unselectAllBtn = new Button { Content = "選択解除", FontSize = 12 };
+        var selectAllBtn = new Button { Content = L.Get("action.selectAll"), FontSize = 12 };
+        var unselectAllBtn = new Button { Content = L.Get("action.deselectAll"), FontSize = 12 };
 
         selectAllBtn.Click += (_, _) =>
         {
@@ -145,7 +145,7 @@ public sealed class ImportExistingDialog : ContentDialog
             };
 
             var displayPath = app.IsStoreApp
-                ? (string.IsNullOrEmpty(app.ExeName) ? "Microsoft Store アプリ" : app.ExeName)
+                ? (string.IsNullOrEmpty(app.ExeName) ? L.Get("searchMode.storeApp") : app.ExeName)
                 : (app.CurrentExePath ?? app.SearchPath);
 
             var pathText = new TextBlock
@@ -213,7 +213,7 @@ public sealed class ImportExistingDialog : ContentDialog
                 SelectedApps.Add(new AppDefinition
                 {
                     Name          = app.Name,
-                    Category      = app.Category,
+                    Category      = string.IsNullOrEmpty(app.Category) ? L.Get("category.imported") : app.Category,
                     SearchPath    = app.SearchPath,
                     ExeName       = app.ExeName,
                     SearchMode    = app.SearchMode,

@@ -154,6 +154,7 @@
                 CornerRadius="8"
                 Spacing="8">
                 <TextBlock
+                    x:Name="StorageLabelText"
                     FontWeight="SemiBold"
                     FontSize="14"
                     Text="ポータブルデータ保存場所" />
@@ -163,6 +164,7 @@
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     TextWrapping="Wrap" />
                 <Button
+                    x:Name="OpenDataFolderButton"
                     Content="📁 保存先フォルダをエクスプローラーで開く"
                     Margin="0,4,0,0"
                     Click="OpenDataFolderButton_Click" />

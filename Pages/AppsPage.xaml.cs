@@ -26,18 +26,18 @@ public sealed partial class AppsPage : Page
         LoadApps();
     }
 
-    private void ApplyLocalization()
+    public void ApplyLocalization()
     {
-        PageTitleText.Text = L.Get("page.apps.title");
+        PageTitleText.Text    = L.Get("page.apps.title");
         PageSubtitleText.Text = L.Get("page.apps.subtitle");
-        EmptyStateText.Text = L.Get("page.apps.empty");
+        EmptyStateText.Text   = L.Get("page.apps.empty");
 
-        SyncButton.Label = L.Get("action.sync");
-        AddButton.Label = L.Get("action.add");
-        ImportExistingButton.Label = "Windows設定からインポート";
-        OpenFolderButton.Label = "フォルダを開く";
-        EditButton.Label = L.Get("action.edit");
-        DeleteButton.Label = L.Get("action.delete");
+        SyncButton.Label           = L.Get("action.sync");
+        AddButton.Label            = L.Get("action.add");
+        ImportExistingButton.Label = L.Get("action.import");
+        OpenFolderButton.Label     = L.Get("action.openFolder");
+        EditButton.Label           = L.Get("action.edit");
+        DeleteButton.Label         = L.Get("action.delete");
     }
 
     private void LoadApps()
@@ -51,7 +51,7 @@ public sealed partial class AppsPage : Page
         EmptyStatePanel.Visibility = AppItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         AppListView.Visibility = AppItems.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
 
-        // Asynchronously load real EXE icons for all apps
+        // Asynchronously load real EXE and Store App icons
         _ = LoadAppIconsAsync();
     }
 
@@ -61,19 +61,22 @@ public sealed partial class AppsPage : Page
         {
             if (app.IconSource != null) continue;
 
-            var exePath = app.CurrentExePath;
-            if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath))
+            var target = app.IsStoreApp ? app.ExeName : app.CurrentExePath;
+            if (string.IsNullOrEmpty(target) || (!app.IsStoreApp && !File.Exists(target)))
             {
-                exePath = await Task.Run(() => ExeDiscoveryService.FindBestMatch(app));
-                if (exePath != null)
+                if (!app.IsStoreApp)
                 {
-                    app.CurrentExePath = exePath;
+                    target = await Task.Run(() => ExeDiscoveryService.FindBestMatch(app));
+                    if (target != null)
+                    {
+                        app.CurrentExePath = target;
+                    }
                 }
             }
 
-            if (!string.IsNullOrEmpty(exePath))
+            if (!string.IsNullOrEmpty(target))
             {
-                var icon = await IconService.GetAppIconAsync(exePath);
+                var icon = await IconService.GetAppIconAsync(target);
                 if (icon != null)
                 {
                     app.IconSource = icon;
@@ -129,7 +132,7 @@ public sealed partial class AppsPage : Page
 
         if (_selectedApp.IsStoreApp)
         {
-            ShowStatus(InfoBarSeverity.Informational, "Microsoft Store アプリ", "Microsoft Store アプリのためフォルダパスはありません。");
+            ShowStatus(InfoBarSeverity.Informational, L.Get("searchMode.storeApp"), L.Get("status.storeAppNoFolder"));
             return;
         }
 
@@ -155,12 +158,12 @@ public sealed partial class AppsPage : Page
             }
             else
             {
-                ShowStatus(InfoBarSeverity.Warning, "フォルダが見つかりません", $"ディレクトリが存在しません: {path}");
+                ShowStatus(InfoBarSeverity.Warning, L.Get("status.folderNotFound"), L.F("status.folderNotFoundDesc", path));
             }
         }
         catch (Exception ex)
         {
-            ShowStatus(InfoBarSeverity.Error, "エラー", ex.Message);
+            ShowStatus(InfoBarSeverity.Error, L.Get("status.error"), ex.Message);
         }
     }
 
@@ -190,7 +193,7 @@ public sealed partial class AppsPage : Page
                 SyncLogPage.AppendLog(
                     r.AppName,
                     r.ErrorMessage is null,
-                    r.ErrorMessage ?? (r.Changed ? $"更新 → {r.NewPath}" : "変更なし"));
+                    r.ErrorMessage ?? (r.Changed ? L.F("sync.updatedTo", r.NewPath ?? "") : L.Get("sync.unchanged")));
             }
 
             var summary = L.F("sync.result", updated, notFound, errors);
@@ -224,10 +227,10 @@ public sealed partial class AppsPage : Page
 
         if (unmanaged.Count == 0)
         {
-            ShowStatus(InfoBarSeverity.Informational, "Windows設定からインポート",
+            ShowStatus(InfoBarSeverity.Informational, L.Get("dialog.import.title"),
                 detected.Count == 0
-                    ? "Windowsのグラフィックス設定に登録されているアプリは見つかりませんでした。"
-                    : "Windowsグラフィックス設定のすべてのアプリが既に取り込み済みです。");
+                    ? L.Get("dialog.import.none")
+                    : L.Get("dialog.import.allImported"));
             return;
         }
 
@@ -250,7 +253,7 @@ public sealed partial class AppsPage : Page
 
             _ = LoadAppIconsAsync();
 
-            ShowStatus(InfoBarSeverity.Success, "インポート完了", $"{dialog.SelectedApps.Count} 件のアプリをWindows設定から取り込みました。");
+            ShowStatus(InfoBarSeverity.Success, L.Get("dialog.import.done"), L.F("dialog.import.doneDesc", dialog.SelectedApps.Count));
         }
     }
 

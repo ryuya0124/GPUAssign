@@ -66,7 +66,7 @@ public sealed class AppEditDialog : ContentDialog
         _categoryBox = new TextBox
         {
             Header          = L.Get("field.category"),
-            PlaceholderText = "例: コミュニケーション, ゲーム, ブラウザ",
+            PlaceholderText = L.Get("field.category.placeholder"),
             Text            = _editing.Category
         };
 
@@ -111,7 +111,7 @@ public sealed class AppEditDialog : ContentDialog
 
         _openFolderBtn = new Button
         {
-            Content = "📁 フォルダをエクスプローラーで開く",
+            Content = L.Get("action.openFolder"),
             HorizontalAlignment = HorizontalAlignment.Left,
             Margin = new Thickness(0, 4, 0, 0)
         };
@@ -162,14 +162,14 @@ public sealed class AppEditDialog : ContentDialog
         // Test discovery section (verifies if EXE actually exists)
         _testDiscoveryBtn = new Button
         {
-            Content = "🔍 EXEの存在確認・検出テスト",
+            Content = L.Get("action.testDiscovery"),
             HorizontalAlignment = HorizontalAlignment.Left
         };
         _testDiscoveryBtn.Click += TestDiscoveryBtn_Click;
 
         _openDetectedExeBtn = new Button
         {
-            Content = "📂 検出されたEXEを開く",
+            Content = L.Get("action.openDetectedExe"),
             HorizontalAlignment = HorizontalAlignment.Left,
             Visibility = Visibility.Collapsed
         };
@@ -264,7 +264,7 @@ public sealed class AppEditDialog : ContentDialog
             SearchMode.LatestVersion => L.Get("searchMode.latestVersion.hint"),
             SearchMode.Glob          => L.Get("searchMode.glob.hint"),
             SearchMode.Regex         => L.Get("searchMode.regex.hint"),
-            SearchMode.StoreApp      => "Microsoft Store / UWP アプリです。パス指定は不要で、パッケージ識別子(AUMID)で管理されます。",
+            SearchMode.StoreApp      => L.Get("searchMode.storeApp.hint"),
             _                        => string.Empty
         };
 
@@ -273,8 +273,8 @@ public sealed class AppEditDialog : ContentDialog
             _searchPathSection.Visibility = Visibility.Collapsed;
             _previewCard.Visibility       = Visibility.Collapsed;
             _recursiveToggle.Visibility   = Visibility.Collapsed;
-            _exeLabelText.Text            = "パッケージ識別子 (AUMID / PackageFamilyName)";
-            _exeNameBox.PlaceholderText   = "例: Microsoft.Windows.Photos_8wekyb3d8bbwe!App";
+            _exeLabelText.Text            = L.Get("field.storeAppId");
+            _exeNameBox.PlaceholderText   = L.Get("field.storeAppId.placeholder");
         }
         else
         {
@@ -283,7 +283,7 @@ public sealed class AppEditDialog : ContentDialog
             _recursiveToggle.Visibility   = mode is SearchMode.LatestVersion or SearchMode.Regex
                 ? Visibility.Visible : Visibility.Collapsed;
             _exeLabelText.Text            = mode == SearchMode.Regex
-                ? $"{L.Get("field.exe")} (正規表現パターン)"
+                ? $"{L.Get("field.exe")} ({L.Get("searchMode.regex")})"
                 : L.Get("field.exe");
             _exeNameBox.PlaceholderText   = L.Get("field.exe.placeholder");
         }
@@ -352,13 +352,13 @@ public sealed class AppEditDialog : ContentDialog
             }
             else
             {
-                _testResultText.Text = $"⚠ ディレクトリが存在しません: {path}";
+                _testResultText.Text = $"⚠ {L.F("status.folderNotFoundDesc", path)}";
                 _testResultText.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 239, 68, 68));
             }
         }
         catch (Exception ex)
         {
-            _testResultText.Text = $"エラー: {ex.Message}";
+            _testResultText.Text = $"{L.Get("status.error")}: {ex.Message}";
         }
     }
 
@@ -367,7 +367,7 @@ public sealed class AppEditDialog : ContentDialog
         _testDiscoveryBtn.IsEnabled = false;
         _testProgressRing.Visibility = Visibility.Visible;
         _testProgressRing.IsActive = true;
-        _testResultText.Text = "探索中...";
+        _testResultText.Text = L.Get("status.searching");
         _testResultText.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 150, 150, 150));
         _openDetectedExeBtn.Visibility = Visibility.Collapsed;
         _lastDetectedExePath = null;
@@ -396,12 +396,12 @@ public sealed class AppEditDialog : ContentDialog
         {
             _lastDetectedExePath = bestMatch;
             _openDetectedExeBtn.Visibility = Visibility.Visible;
-            _testResultText.Text = $"✓ 検出成功 ({allMatches.Count} 件中 最適):\n{bestMatch}";
+            _testResultText.Text = L.F("status.detectSuccess", allMatches.Count, bestMatch);
             _testResultText.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 34, 197, 94));
         }
         else
         {
-            _testResultText.Text = "✗ 該当するEXEが見つかりませんでした。\n検索ディレクトリとEXE名・検索モードを確認してください。";
+            _testResultText.Text = L.Get("status.detectFailed");
             _testResultText.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 239, 68, 68));
         }
     }
@@ -444,7 +444,7 @@ public sealed class AppEditDialog : ContentDialog
         SearchMode.LatestVersion => L.Get("searchMode.latestVersion"),
         SearchMode.Glob          => L.Get("searchMode.glob"),
         SearchMode.Regex         => L.Get("searchMode.regex"),
-        SearchMode.StoreApp      => "Microsoft Store アプリ",
+        SearchMode.StoreApp      => L.Get("searchMode.storeApp"),
         _                        => mode.ToString()
     };
 }

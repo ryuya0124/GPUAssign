@@ -104,8 +104,8 @@ public static class GpuPreferenceService
                     var storeAppDef = new AppDefinition
                     {
                         Name           = appName,
-                        Category       = "Microsoft Store アプリ",
-                        SearchPath     = "(Microsoft Store アプリ - パス指定不要)",
+                        Category       = L.Get("category.storeApp"),
+                        SearchPath     = L.Get("field.storeAppNoPath"),
                         ExeName        = keyName,
                         SearchMode     = SearchMode.StoreApp,
                         Recursive      = false,
@@ -177,7 +177,7 @@ public static class GpuPreferenceService
                 var appDef = new AppDefinition
                 {
                     Name           = win32AppName,
-                    Category       = "Windows設定からインポート",
+                    Category       = L.Get("category.imported"),
                     SearchPath     = searchPath,
                     ExeName        = exeName,
                     SearchMode     = mode,

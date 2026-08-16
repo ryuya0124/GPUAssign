@@ -57,12 +57,13 @@ public sealed partial class BackupPage : Page
         {
             var path = BackupService.CreateBackup();
             ShowStatus(InfoBarSeverity.Success, L.Get("action.backup"),
-                $"{L.Get("status.backupCreated")}: {Path.GetFileName(path)}");
+                L.F("status.backupCreated", Path.GetFileName(path)));
             LoadBackups();
         }
         catch (Exception ex)
         {
-            ShowStatus(InfoBarSeverity.Error, L.Get("status.backupFailed"), ex.Message);
+            ShowStatus(InfoBarSeverity.Error, L.Get("action.backup"),
+                L.F("status.backupFailed", ex.Message));
         }
     }
 

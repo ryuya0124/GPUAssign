@@ -19,7 +19,7 @@ public sealed partial class SettingsPage : Page
         LoadSettings();
     }
 
-    private void ApplyLocalization()
+    public void ApplyLocalization()
     {
         PageTitleText.Text    = L.Get("page.settings.title");
         PageSubtitleText.Text = L.Get("page.settings.subtitle");
@@ -27,17 +27,21 @@ public sealed partial class SettingsPage : Page
         ThreadsLabel.Text = L.Get("page.settings.threads.label");
         ThreadsDesc.Text  = L.Get("page.settings.threads.desc");
 
-        ThemeLabel.Text      = L.Get("page.settings.theme.label");
+        ThemeLabel.Text         = L.Get("page.settings.theme.label");
         ThemeSystemItem.Content = L.Get("page.settings.theme.system");
         ThemeLightItem.Content  = L.Get("page.settings.theme.light");
         ThemeDarkItem.Content   = L.Get("page.settings.theme.dark");
 
-        LanguageLabel.Text = L.Get("page.settings.language.label");
+        LanguageLabel.Text   = L.Get("page.settings.language.label");
         LangAutoItem.Content = L.Get("page.settings.language.auto");
 
         AutoStartToggle.Header   = L.Get("page.settings.autoStart.label");
         AutoCleanupToggle.Header = L.Get("page.settings.autoCleanup.label");
         CleanupNowButton.Content = L.Get("page.settings.cleanupNow");
+        OpenDataFolderButton.Content = L.Get("page.settings.openFolder");
+        StorageLabelText.Text    = L.Get("page.settings.storage.label");
+
+        StoragePathText.Text = L.F("page.settings.storage.format", ConfigService.ConfigDir);
     }
 
     private void LoadSettings()
@@ -86,7 +90,7 @@ public sealed partial class SettingsPage : Page
         AutoCleanupToggle.IsOn = _config.AutoCleanup;
 
         // Storage path
-        StoragePathText.Text = $"データ保存先: {ConfigService.ConfigDir} (apps.json, sync_log.json, backups/)";
+        StoragePathText.Text = L.F("page.settings.storage.format", ConfigService.ConfigDir);
 
         _loading = false;
     }
@@ -140,17 +144,17 @@ public sealed partial class SettingsPage : Page
             if (AutoStartToggle.IsOn)
             {
                 StartupService.EnableStartupTask(exePath);
-                ShowStatus(InfoBarSeverity.Success, "自動同期を有効化しました", "次回ログオン時よりバックグラウンド同期が実行されます。");
+                ShowStatus(InfoBarSeverity.Success, L.Get("status.autoStartEnabled"), L.Get("status.autoStartEnabledDesc"));
             }
             else
             {
                 StartupService.DisableStartupTask();
-                ShowStatus(InfoBarSeverity.Informational, "自動同期を無効化しました", "");
+                ShowStatus(InfoBarSeverity.Informational, L.Get("status.autoStartDisabled"), "");
             }
         }
         catch (Exception ex)
         {
-            ShowStatus(InfoBarSeverity.Error, "エラー", ex.Message);
+            ShowStatus(InfoBarSeverity.Error, L.Get("status.error"), ex.Message);
         }
     }
 
@@ -172,9 +176,9 @@ public sealed partial class SettingsPage : Page
         }
 
         if (total > 0)
-            ShowStatus(InfoBarSeverity.Success, "整理完了", L.F("status.cleanupDone", total));
+            ShowStatus(InfoBarSeverity.Success, L.Get("status.cleanupTitle"), L.F("status.cleanupDone", total));
         else
-            ShowStatus(InfoBarSeverity.Informational, "整理完了", L.Get("status.cleanupNone"));
+            ShowStatus(InfoBarSeverity.Informational, L.Get("status.cleanupTitle"), L.Get("status.cleanupNone"));
     }
 
     private void OpenDataFolderButton_Click(object sender, RoutedEventArgs e)
@@ -185,7 +189,7 @@ public sealed partial class SettingsPage : Page
         }
         catch (Exception ex)
         {
-            ShowStatus(InfoBarSeverity.Error, "エラー", ex.Message);
+            ShowStatus(InfoBarSeverity.Error, L.Get("status.error"), ex.Message);
         }
     }
 

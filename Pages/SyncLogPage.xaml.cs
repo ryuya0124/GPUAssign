@@ -111,12 +111,16 @@ public sealed partial class SyncLogPage : Page
                 AppendLog(
                     r.AppName,
                     r.ErrorMessage is null,
-                    r.ErrorMessage ?? (r.Changed ? $"更新 → {r.NewPath}" : "変更なし"));
+                    r.ErrorMessage ?? (r.Changed ? L.F("sync.updatedTo", r.NewPath ?? "") : L.Get("sync.unchanged")));
             }
 
-            StatusBar.Severity = InfoBarSeverity.Success;
+            int updated  = results.Count(r => r.Changed);
+            int notFound = results.Count(r => r.NewPath is null && r.ErrorMessage is null);
+            int errors   = results.Count(r => r.ErrorMessage is not null);
+
+            StatusBar.Severity = errors > 0 ? InfoBarSeverity.Error : InfoBarSeverity.Success;
             StatusBar.Title    = L.Get("sync.done");
-            StatusBar.Message  = $"{results.Count} 件処理しました";
+            StatusBar.Message  = L.F("sync.result", updated, notFound, errors);
 
             LoadLog();
         }

@@ -144,8 +144,8 @@ public static class SyncService
 
             app.SyncStatus  = SyncStatus.Synced;
             app.SyncMessage = needsUpdate
-                ? $"更新 → {Path.GetFileName(Path.GetDirectoryName(bestExe) ?? "")}/{Path.GetFileName(bestExe)}"
-                : "変更なし";
+                ? L.F("sync.updatedTo", $"{Path.GetFileName(Path.GetDirectoryName(bestExe) ?? "")}/{Path.GetFileName(bestExe)}")
+                : L.Get("sync.unchanged");
 
             return new AppSyncResult(app.Name, needsUpdate, null, bestExe, removedPaths, null);
         }
