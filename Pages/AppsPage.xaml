@@ -214,12 +214,6 @@
                 Label="削除"
                 IsEnabled="False"
                 Click="DeleteButton_Click" />
-            <AppBarSeparator />
-            <AppBarButton
-                x:Name="SettingsButton"
-                Icon="Setting"
-                Label="環境設定"
-                Click="SettingsButton_Click" />
         </CommandBar>
     </Grid>
 </Page>

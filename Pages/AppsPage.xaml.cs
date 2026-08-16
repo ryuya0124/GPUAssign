@@ -38,7 +38,6 @@ public sealed partial class AppsPage : Page
         OpenFolderButton.Label = "フォルダを開く";
         EditButton.Label = L.Get("action.edit");
         DeleteButton.Label = L.Get("action.delete");
-        SettingsButton.Label = L.Get("nav.settings");
     }
 
     private void LoadApps()
@@ -335,15 +334,6 @@ public sealed partial class AppsPage : Page
                 AppListView.Visibility = Visibility.Collapsed;
             }
         }
-    }
-
-    // ---- Settings Dialog ----
-
-    private async void SettingsButton_Click(object sender, RoutedEventArgs e)
-    {
-        var dialog = new SettingsDialog { XamlRoot = XamlRoot };
-        await dialog.ShowAsync();
-        _config = ConfigService.Load();
     }
 
     // ---- Helpers ----

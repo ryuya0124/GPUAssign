@@ -23,9 +23,10 @@ public sealed partial class MainWindow : Window
         Title = L.Get("app.title");
         AppTitleBar.Title = L.Get("app.title");
 
-        NavApps.Content = L.Get("nav.apps");
-        NavSync.Content = L.Get("nav.syncLog");
-        NavBackup.Content = L.Get("nav.backup");
+        NavApps.Content    = L.Get("nav.apps");
+        NavSync.Content    = L.Get("nav.syncLog");
+        NavBackup.Content  = L.Get("nav.backup");
+        NavSettings.Content = L.Get("nav.settings");
     }
 
     private void NavView_SelectionChanged(NavigationView sender, NavigationViewSelectionChangedEventArgs args)
@@ -38,6 +39,7 @@ public sealed partial class MainWindow : Window
             "apps"     => typeof(AppsPage),
             "sync"     => typeof(SyncLogPage),
             "backup"   => typeof(BackupPage),
+            "settings" => typeof(SettingsPage),
             _          => typeof(AppsPage)
         };
 
