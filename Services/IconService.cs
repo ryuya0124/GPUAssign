@@ -11,7 +11,7 @@ using Windows.Storage.Streams;
 namespace GPUAssign.Services;
 
 /// <summary>
-/// Extracts and caches application icons from EXE files for WinUI 3 display.
+/// Extracts and caches application icons from EXE files and Microsoft Store packages for WinUI 3 display.
 /// </summary>
 public static class IconService
 {
@@ -71,18 +71,22 @@ public static class IconService
     }
 
     /// <summary>
-    /// Loads the icon for an EXE file as a WinUI 3 BitmapImage asynchronously.
-    /// Safely handles background extraction and UI dispatching.
+    /// Loads the icon for an EXE file or Microsoft Store app as a WinUI 3 BitmapImage asynchronously.
     /// </summary>
-    public static async Task<BitmapImage?> GetAppIconAsync(string? exePath)
+    public static async Task<BitmapImage?> GetAppIconAsync(string? targetPathOrAumid)
     {
-        if (string.IsNullOrEmpty(exePath)) return null;
+        if (string.IsNullOrEmpty(targetPathOrAumid)) return null;
 
-        // Phase 1: Heavy extraction on threadpool
-        var bytes = await Task.Run(() => ExtractIconBytes(exePath));
+        // 1. If this is a Microsoft Store packaged application
+        if (StoreAppService.IsStoreAppId(targetPathOrAumid))
+        {
+            return await StoreAppService.GetStoreAppIconAsync(targetPathOrAumid);
+        }
+
+        // 2. Standard Win32 EXE
+        var bytes = await Task.Run(() => ExtractIconBytes(targetPathOrAumid));
         if (bytes == null) return null;
 
-        // Phase 2: Create WinUI BitmapImage on UI thread
         return await CreateBitmapFromBytesAsync(bytes);
     }
 }

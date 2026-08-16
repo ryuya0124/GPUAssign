@@ -98,8 +98,8 @@ public static class GpuPreferenceService
 
                 if (isStoreApp)
                 {
-                    // Format readable display name from AUMID (e.g. OpenAI.ChatGPT-Desktop_2p2nqsd0c76g0!ChatGPT)
-                    string appName = FormatStoreAppName(keyName);
+                    // Get official localized display name from package metadata
+                    string appName = StoreAppService.GetStoreAppDisplayName(keyName);
 
                     var storeAppDef = new AppDefinition
                     {
