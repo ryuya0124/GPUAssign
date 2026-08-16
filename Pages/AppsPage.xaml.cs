@@ -35,7 +35,6 @@ public sealed partial class AppsPage : Page
         SyncButton.Label = L.Get("action.sync");
         AddButton.Label = L.Get("action.add");
         ImportExistingButton.Label = "Windows設定からインポート";
-        CatalogButton.Label = L.Get("action.addFromCatalog");
         OpenFolderButton.Label = "フォルダを開く";
         EditButton.Label = L.Get("action.edit");
         DeleteButton.Label = L.Get("action.delete");
@@ -62,7 +61,6 @@ public sealed partial class AppsPage : Page
         {
             if (app.IconSource != null) continue;
 
-            // Resolve target EXE path if not cached
             var exePath = app.CurrentExePath;
             if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath))
             {
@@ -84,12 +82,43 @@ public sealed partial class AppsPage : Page
         }
     }
 
+    // ---- Click Item to Edit Directly ----
+
+    private void AppListView_ItemClick(object sender, ItemClickEventArgs e)
+    {
+        if (e.ClickedItem is AppDefinition app)
+        {
+            OpenEditDialog(app);
+        }
+    }
+
     private void AppListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         _selectedApp = AppListView.SelectedItem as AppDefinition;
         OpenFolderButton.IsEnabled = _selectedApp is not null;
         EditButton.IsEnabled       = _selectedApp is not null;
         DeleteButton.IsEnabled     = _selectedApp is not null;
+    }
+
+    // ---- Inline GPU ComboBox Selection Changed ----
+
+    private void RowGpuComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (sender is ComboBox cb && cb.Tag is AppDefinition app)
+        {
+            ConfigService.Save(_config);
+
+            // If app already has a known target EXE, update registry immediately
+            if (!string.IsNullOrEmpty(app.CurrentExePath) && File.Exists(app.CurrentExePath))
+            {
+                try
+                {
+                    GpuPreferenceService.SetPreference(app.CurrentExePath, app.GpuPreference);
+                    app.SyncStatus = SyncStatus.Synced;
+                }
+                catch { }
+            }
+        }
     }
 
     // ---- Open App Folder in Explorer ----
@@ -100,14 +129,12 @@ public sealed partial class AppsPage : Page
 
         try
         {
-            // If current EXE exists, select it in explorer
             if (!string.IsNullOrEmpty(_selectedApp.CurrentExePath) && File.Exists(_selectedApp.CurrentExePath))
             {
                 Process.Start(new ProcessStartInfo("explorer.exe", $"/select,\"{_selectedApp.CurrentExePath}\"") { UseShellExecute = true });
                 return;
             }
 
-            // Otherwise open the search directory
             var path = ExeDiscoveryService.ExpandPath(_selectedApp.SearchPath);
             if (path.Contains('*') || path.Contains('?'))
             {
@@ -167,7 +194,6 @@ public sealed partial class AppsPage : Page
             else
                 ShowStatus(InfoBarSeverity.Success, L.Get("sync.done"), summary);
 
-            // Refresh list
             LoadApps();
         }
         catch (Exception ex)
@@ -187,7 +213,6 @@ public sealed partial class AppsPage : Page
     {
         var detected = GpuPreferenceService.ScanExistingWindowsPreferences();
 
-        // Filter out apps already managed in GPU Assign (by ExeName or Name)
         var managedExeNames = _config.Apps.Select(a => a.ExeName).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var unmanaged = detected.Where(d => !managedExeNames.Contains(d.ExeName)).ToList();
 
@@ -244,46 +269,19 @@ public sealed partial class AppsPage : Page
         }
     }
 
-    // ---- Add From Catalog (Optional helper) ----
+    // ---- Edit ----
 
-    private async void CatalogButton_Click(object sender, RoutedEventArgs e)
+    private void EditButton_Click(object sender, RoutedEventArgs e)
     {
-        var unadopted = ConfigService.GetUnadoptedCatalogEntries(_config);
-        if (unadopted.Count == 0)
+        if (_selectedApp != null)
         {
-            ShowStatus(InfoBarSeverity.Informational, L.Get("dialog.addFromCatalog.title"), "すべてのカタログアプリが既に追加されています。");
-            return;
-        }
-
-        var dialog = new CatalogPickerDialog(unadopted)
-        {
-            XamlRoot = XamlRoot
-        };
-
-        var result = await dialog.ShowAsync();
-        if (result == ContentDialogResult.Primary && dialog.SelectedApps.Count > 0)
-        {
-            foreach (var app in dialog.SelectedApps)
-            {
-                _config.Apps.Add(app);
-                AppItems.Add(app);
-            }
-            ConfigService.Save(_config);
-            EmptyStatePanel.Visibility = Visibility.Collapsed;
-            AppListView.Visibility = Visibility.Visible;
-            _ = LoadAppIconsAsync();
-
-            ShowStatus(InfoBarSeverity.Success, L.Get("dialog.addFromCatalog.title"), $"{dialog.SelectedApps.Count} 件のアプリを追加しました。");
+            OpenEditDialog(_selectedApp);
         }
     }
 
-    // ---- Edit ----
-
-    private async void EditButton_Click(object sender, RoutedEventArgs e)
+    private async void OpenEditDialog(AppDefinition app)
     {
-        if (_selectedApp is null) return;
-
-        var dialog = new AppEditDialog(_selectedApp)
+        var dialog = new AppEditDialog(app)
         {
             XamlRoot = XamlRoot
         };
@@ -292,13 +290,12 @@ public sealed partial class AppsPage : Page
         if (result == ContentDialogResult.Primary)
         {
             ConfigService.Save(_config);
-            // Refresh item in list
-            var idx = AppItems.IndexOf(_selectedApp);
+            var idx = AppItems.IndexOf(app);
             if (idx >= 0)
             {
                 AppItems.RemoveAt(idx);
-                AppItems.Insert(idx, _selectedApp);
-                AppListView.SelectedItem = _selectedApp;
+                AppItems.Insert(idx, app);
+                AppListView.SelectedItem = app;
             }
             _ = LoadAppIconsAsync();
         }

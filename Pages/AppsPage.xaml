@@ -29,7 +29,7 @@
                 x:Name="PageSubtitleText"
                 Margin="0,4,0,0"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                Text="EXEのバージョンに依存しないGPU割り当てルールを管理します" />
+                Text="EXEのバージョンに依存しないGPU割り当てルールを管理します (クリックで編集)" />
         </StackPanel>
 
         <!-- Status bar / info strip with progress bar -->
@@ -65,6 +65,8 @@
                 x:Name="AppListView"
                 ItemsSource="{x:Bind AppItems, Mode=OneWay}"
                 SelectionMode="Single"
+                IsItemClickEnabled="True"
+                ItemClick="AppListView_ItemClick"
                 SelectionChanged="AppListView_SelectionChanged">
 
                 <ListView.ItemContainerStyle>
@@ -82,9 +84,9 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="44" />
                                 <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="140" />
                                 <ColumnDefinition Width="130" />
-                                <ColumnDefinition Width="110" />
+                                <ColumnDefinition Width="150" />
+                                <ColumnDefinition Width="100" />
                             </Grid.ColumnDefinitions>
 
                             <!-- App icon (Actual EXE icon with letter fallback) -->
@@ -146,19 +148,24 @@
                                 Text="{x:Bind Category, Mode=OneWay}"
                                 TextTrimming="CharacterEllipsis" />
 
-                            <!-- GPU label -->
-                            <TextBlock
+                            <!-- GPU selection dropdown directly in list row -->
+                            <ComboBox
                                 Grid.Column="3"
+                                Width="140"
                                 VerticalAlignment="Center"
-                                FontSize="13"
-                                FontWeight="Medium"
-                                Text="{x:Bind GpuLabel, Mode=OneWay}" />
+                                SelectedIndex="{x:Bind GpuIndex, Mode=TwoWay}"
+                                SelectionChanged="RowGpuComboBox_SelectionChanged"
+                                Tag="{x:Bind}">
+                                <ComboBoxItem Content="システム既定" />
+                                <ComboBoxItem Content="省電力" />
+                                <ComboBoxItem Content="高パフォーマンス" />
+                            </ComboBox>
 
                             <!-- Sync status -->
                             <TextBlock
                                 Grid.Column="4"
                                 VerticalAlignment="Center"
-                                FontSize="13"
+                                FontSize="12"
                                 Text="{x:Bind SyncStatusLabel, Mode=OneWay}" />
                         </Grid>
                     </DataTemplate>
@@ -188,11 +195,6 @@
                 Icon="Import"
                 Label="Windows設定からインポート"
                 Click="ImportExistingButton_Click" />
-            <AppBarButton
-                x:Name="CatalogButton"
-                Icon="Shop"
-                Label="カタログから追加"
-                Click="CatalogButton_Click" />
             <AppBarSeparator />
             <AppBarButton
                 x:Name="OpenFolderButton"

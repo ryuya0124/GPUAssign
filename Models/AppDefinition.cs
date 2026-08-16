@@ -59,6 +59,7 @@ public class AppDefinition : INotifyPropertyChanged
     private SyncStatus _syncStatus = SyncStatus.Unknown;
     private string? _syncMessage;
     private ImageSource? _iconSource;
+    private GpuPreference _gpuPreference = GpuPreference.Default;
 
     [JsonPropertyName("id")]
     public string Id { get; set; } = Guid.NewGuid().ToString();
@@ -70,7 +71,7 @@ public class AppDefinition : INotifyPropertyChanged
         set { _name = value; OnPropertyChanged(); OnPropertyChanged(nameof(NameInitial)); }
     }
 
-    /// <summary>Display category (コミュニケーション, ブラウザ, ゲーム …)</summary>
+    /// <summary>Display category</summary>
     [JsonPropertyName("category")]
     public string Category { get; set; } = string.Empty;
 
@@ -99,13 +100,39 @@ public class AppDefinition : INotifyPropertyChanged
 
     /// <summary>Desired GPU preference.</summary>
     [JsonPropertyName("gpu")]
-    public GpuPreference GpuPreference { get; set; } = GpuPreference.Default;
+    public GpuPreference GpuPreference
+    {
+        get => _gpuPreference;
+        set
+        {
+            if (_gpuPreference != value)
+            {
+                _gpuPreference = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(GpuIndex));
+                OnPropertyChanged(nameof(GpuLabel));
+            }
+        }
+    }
 
     /// <summary>EXE paths this app has been assigned to in the past.</summary>
     [JsonPropertyName("managedPaths")]
     public List<string> ManagedPaths { get; set; } = new();
 
     // ---- Runtime-only (not persisted) ----
+
+    [JsonIgnore]
+    public int GpuIndex
+    {
+        get => (int)GpuPreference;
+        set
+        {
+            if ((int)GpuPreference != value && value >= 0)
+            {
+                GpuPreference = (GpuPreference)value;
+            }
+        }
+    }
 
     [JsonIgnore]
     public string? CurrentExePath

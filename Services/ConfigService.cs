@@ -1,7 +1,5 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using GPUAssign.Models;
@@ -53,33 +51,5 @@ public static class ConfigService
             File.WriteAllText(ConfigFilePath, JsonSerializer.Serialize(config, JsonOptions));
         }
         catch { /* best effort */ }
-    }
-
-    // ── Catalog (default_apps.json, optional presets) ──
-
-    public static List<AppDefinition> LoadCatalog()
-    {
-        try
-        {
-            var catalogPath = Path.Combine(ConfigDir, "Assets", "default_apps.json");
-            if (!File.Exists(catalogPath)) return new();
-
-            var json = File.ReadAllText(catalogPath);
-            var config = JsonSerializer.Deserialize<AppConfig>(json, JsonOptions);
-            return config?.Apps ?? new();
-        }
-        catch { return new(); }
-    }
-
-    public static List<AppDefinition> GetUnadoptedCatalogEntries(AppConfig userConfig)
-    {
-        var catalog = LoadCatalog();
-        var userKeys = userConfig.Apps
-            .Select(a => (a.Name, a.ExeName))
-            .ToHashSet();
-
-        return catalog
-            .Where(c => !userKeys.Contains((c.Name, c.ExeName)))
-            .ToList();
     }
 }
