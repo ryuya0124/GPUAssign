@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Text.Json.Serialization;
 using GPUAssign.Services;
+using Microsoft.UI.Xaml.Media;
 
 namespace GPUAssign.Models;
 
@@ -57,6 +58,7 @@ public class AppDefinition : INotifyPropertyChanged
     private string? _currentExePath;
     private SyncStatus _syncStatus = SyncStatus.Unknown;
     private string? _syncMessage;
+    private ImageSource? _iconSource;
 
     [JsonPropertyName("id")]
     public string Id { get; set; } = Guid.NewGuid().ToString();
@@ -111,6 +113,25 @@ public class AppDefinition : INotifyPropertyChanged
         get => _currentExePath;
         set { _currentExePath = value; OnPropertyChanged(); }
     }
+
+    [JsonIgnore]
+    public ImageSource? IconSource
+    {
+        get => _iconSource;
+        set
+        {
+            _iconSource = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasIcon));
+            OnPropertyChanged(nameof(HasNoIcon));
+        }
+    }
+
+    [JsonIgnore]
+    public bool HasIcon => _iconSource != null;
+
+    [JsonIgnore]
+    public bool HasNoIcon => _iconSource == null;
 
     [JsonIgnore]
     public SyncStatus SyncStatus

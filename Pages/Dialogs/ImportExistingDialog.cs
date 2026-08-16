@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using GPUAssign.Models;
 using GPUAssign.Services;
 using Microsoft.UI.Xaml;
@@ -16,7 +17,7 @@ public sealed class ImportExistingDialog : ContentDialog
 {
     public List<AppDefinition> SelectedApps { get; } = new();
 
-    private readonly List<(CheckBox cb, AppDefinition app)> _rows = new();
+    private readonly List<(CheckBox cb, AppDefinition app, Image img)> _rows = new();
 
     public ImportExistingDialog(List<AppDefinition> detectedApps)
     {
@@ -33,7 +34,7 @@ public sealed class ImportExistingDialog : ContentDialog
             MaxHeight = 520
         };
 
-        var outer = new StackPanel { Width = 480, Spacing = 14 };
+        var outer = new StackPanel { Width = 500, Spacing = 14 };
 
         outer.Children.Add(new TextBlock
         {
@@ -49,12 +50,12 @@ public sealed class ImportExistingDialog : ContentDialog
 
         selectAllBtn.Click += (_, _) =>
         {
-            foreach (var (cb, _) in _rows) cb.IsChecked = true;
+            foreach (var (cb, _, _) in _rows) cb.IsChecked = true;
             OnCheckChanged();
         };
         unselectAllBtn.Click += (_, _) =>
         {
-            foreach (var (cb, _) in _rows) cb.IsChecked = false;
+            foreach (var (cb, _, _) in _rows) cb.IsChecked = false;
             OnCheckChanged();
         };
 
@@ -71,6 +72,35 @@ public sealed class ImportExistingDialog : ContentDialog
                 IsChecked = true, // default checked
                 HorizontalAlignment = HorizontalAlignment.Stretch
             };
+
+            var img = new Image
+            {
+                Width = 24,
+                Height = 24,
+                Stretch = Microsoft.UI.Xaml.Media.Stretch.Uniform,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+
+            var letterBorder = new Border
+            {
+                Width = 24,
+                Height = 24,
+                CornerRadius = new CornerRadius(4),
+                Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(
+                    Windows.UI.Color.FromArgb(255, 34, 130, 246)),
+                Child = new TextBlock
+                {
+                    Text = app.NameInitial,
+                    FontSize = 12,
+                    Foreground = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.White),
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            };
+
+            var iconGrid = new Grid { Width = 24, Height = 24 };
+            iconGrid.Children.Add(letterBorder);
+            iconGrid.Children.Add(img);
 
             var modeLabel = new Border
             {
@@ -107,7 +137,8 @@ public sealed class ImportExistingDialog : ContentDialog
                 Spacing     = 8,
                 Children    =
                 {
-                    new TextBlock { Text = app.Name, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, FontSize = 13 },
+                    iconGrid,
+                    new TextBlock { Text = app.Name, FontWeight = Microsoft.UI.Text.FontWeights.SemiBold, FontSize = 13, VerticalAlignment = VerticalAlignment.Center },
                     modeLabel,
                     gpuBadge
                 }
@@ -119,7 +150,7 @@ public sealed class ImportExistingDialog : ContentDialog
                 FontSize     = 11,
                 Opacity      = 0.65,
                 TextTrimming = TextTrimming.CharacterEllipsis,
-                Margin       = new Thickness(0, 2, 0, 0)
+                Margin       = new Thickness(32, 2, 0, 0)
             };
 
             var itemContent = new StackPanel
@@ -131,7 +162,7 @@ public sealed class ImportExistingDialog : ContentDialog
             cb.Checked   += (_, _) => OnCheckChanged();
             cb.Unchecked += (_, _) => OnCheckChanged();
 
-            _rows.Add((cb, app));
+            _rows.Add((cb, app, img));
             listPanel.Children.Add(cb);
         }
 
@@ -141,6 +172,25 @@ public sealed class ImportExistingDialog : ContentDialog
 
         PrimaryButtonClick += OnAdd;
         OnCheckChanged();
+
+        // Load icons asynchronously
+        _ = LoadDialogIconsAsync();
+    }
+
+    private async Task LoadDialogIconsAsync()
+    {
+        foreach (var (_, app, img) in _rows)
+        {
+            var targetExe = app.CurrentExePath ?? app.SearchPath;
+            if (!string.IsNullOrEmpty(targetExe))
+            {
+                var icon = await IconService.GetAppIconAsync(targetExe);
+                if (icon != null)
+                {
+                    img.Source = icon;
+                }
+            }
+        }
     }
 
     private void OnCheckChanged()
@@ -151,7 +201,7 @@ public sealed class ImportExistingDialog : ContentDialog
     private void OnAdd(ContentDialog sender, ContentDialogButtonClickEventArgs args)
     {
         SelectedApps.Clear();
-        foreach (var (cb, app) in _rows)
+        foreach (var (cb, app, _) in _rows)
         {
             if (cb.IsChecked == true)
             {

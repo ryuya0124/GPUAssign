@@ -87,19 +87,26 @@
                                 <ColumnDefinition Width="110" />
                             </Grid.ColumnDefinitions>
 
-                            <!-- App icon placeholder -->
-                            <Border
-                                Grid.Column="0"
-                                Width="40" Height="40"
-                                CornerRadius="8"
-                                Background="{ThemeResource AccentFillColorDefaultBrush}">
-                                <TextBlock
+                            <!-- App icon (Actual EXE icon with letter fallback) -->
+                            <Grid Grid.Column="0" Width="40" Height="40">
+                                <Border
+                                    Width="40" Height="40"
+                                    CornerRadius="8"
+                                    Background="{ThemeResource AccentFillColorDefaultBrush}">
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="18"
+                                        Foreground="White"
+                                        Text="{x:Bind NameInitial, Mode=OneWay}" />
+                                </Border>
+                                <Image
+                                    Width="36" Height="36"
+                                    Source="{x:Bind IconSource, Mode=OneWay}"
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
-                                    FontSize="18"
-                                    Foreground="White"
-                                    Text="{x:Bind NameInitial, Mode=OneWay}" />
-                            </Border>
+                                    Stretch="Uniform" />
+                            </Grid>
 
                             <!-- Name + path -->
                             <StackPanel Grid.Column="1" VerticalAlignment="Center">

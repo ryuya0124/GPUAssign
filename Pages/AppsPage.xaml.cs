@@ -51,6 +51,37 @@ public sealed partial class AppsPage : Page
 
         EmptyStatePanel.Visibility = AppItems.Count == 0 ? Visibility.Visible : Visibility.Collapsed;
         AppListView.Visibility = AppItems.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+
+        // Asynchronously load real EXE icons for all apps
+        _ = LoadAppIconsAsync();
+    }
+
+    private async Task LoadAppIconsAsync()
+    {
+        foreach (var app in AppItems.ToList())
+        {
+            if (app.IconSource != null) continue;
+
+            // Resolve target EXE path if not cached
+            var exePath = app.CurrentExePath;
+            if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath))
+            {
+                exePath = await Task.Run(() => ExeDiscoveryService.FindBestMatch(app));
+                if (exePath != null)
+                {
+                    app.CurrentExePath = exePath;
+                }
+            }
+
+            if (!string.IsNullOrEmpty(exePath))
+            {
+                var icon = await IconService.GetAppIconAsync(exePath);
+                if (icon != null)
+                {
+                    app.IconSource = icon;
+                }
+            }
+        }
     }
 
     private void AppListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -162,7 +193,7 @@ public sealed partial class AppsPage : Page
 
         if (unmanaged.Count == 0)
         {
-            ShowStatus(InfoBarSeverity.Informational, "Windows既存設定からインポート",
+            ShowStatus(InfoBarSeverity.Informational, "Windows設定からインポート",
                 detected.Count == 0
                     ? "Windowsのグラフィックス設定に登録されているアプリは見つかりませんでした。"
                     : "Windowsグラフィックス設定のすべてのアプリが既に取り込み済みです。");
@@ -186,6 +217,8 @@ public sealed partial class AppsPage : Page
             EmptyStatePanel.Visibility = Visibility.Collapsed;
             AppListView.Visibility = Visibility.Visible;
 
+            _ = LoadAppIconsAsync();
+
             ShowStatus(InfoBarSeverity.Success, "インポート完了", $"{dialog.SelectedApps.Count} 件のアプリをWindows設定から取り込みました。");
         }
     }
@@ -207,6 +240,7 @@ public sealed partial class AppsPage : Page
             AppItems.Add(newApp);
             EmptyStatePanel.Visibility = Visibility.Collapsed;
             AppListView.Visibility = Visibility.Visible;
+            _ = LoadAppIconsAsync();
         }
     }
 
@@ -237,6 +271,7 @@ public sealed partial class AppsPage : Page
             ConfigService.Save(_config);
             EmptyStatePanel.Visibility = Visibility.Collapsed;
             AppListView.Visibility = Visibility.Visible;
+            _ = LoadAppIconsAsync();
 
             ShowStatus(InfoBarSeverity.Success, L.Get("dialog.addFromCatalog.title"), $"{dialog.SelectedApps.Count} 件のアプリを追加しました。");
         }
@@ -265,6 +300,7 @@ public sealed partial class AppsPage : Page
                 AppItems.Insert(idx, _selectedApp);
                 AppListView.SelectedItem = _selectedApp;
             }
+            _ = LoadAppIconsAsync();
         }
     }
 
