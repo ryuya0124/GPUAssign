@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="GPUAssign.Pages.SyncLogPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:GPUAssign.Pages"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Background="Transparent"
+    mc:Ignorable="d">
+
+    <Grid Margin="24,20,24,24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,4">
+            <TextBlock
+                x:Name="PageTitleText"
+                Style="{StaticResource TitleTextBlockStyle}"
+                Text="同期ログ"
+                Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+            <TextBlock
+                x:Name="PageSubtitleText"
+                Margin="0,4,0,0"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Text="GPU同期の実行履歴" />
+        </StackPanel>
+
+        <!-- Status -->
+        <InfoBar
+            x:Name="StatusBar"
+            Grid.Row="1"
+            Margin="0,12,0,0"
+            IsClosable="True"
+            IsOpen="False" />
+
+        <!-- Log list -->
+        <ListView
+            x:Name="LogListView"
+            Grid.Row="2"
+            Margin="0,16,0,0"
+            SelectionMode="None">
+
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    <Setter Property="Padding" Value="12,8" />
+                    <Setter Property="CornerRadius" Value="8" />
+                    <Setter Property="Margin" Value="0,2" />
+                    <Setter Property="IsHitTestVisible" Value="False" />
+                </Style>
+            </ListView.ItemContainerStyle>
+
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="local:SyncLogEntry">
+                    <Grid ColumnSpacing="12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="160" />
+                            <ColumnDefinition Width="100" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="80" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock
+                            Grid.Column="0"
+                            VerticalAlignment="Center"
+                            FontWeight="SemiBold"
+                            Text="{x:Bind AppName}" />
+
+                        <TextBlock
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Text="{x:Bind Timestamp}" />
+
+                        <TextBlock
+                            Grid.Column="2"
+                            VerticalAlignment="Center"
+                            Text="{x:Bind Message}"
+                            TextTrimming="CharacterEllipsis"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                        <TextBlock
+                            Grid.Column="3"
+                            VerticalAlignment="Center"
+                            Text="{x:Bind StatusLabel}"
+                            Foreground="{x:Bind StatusColor}" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <!-- Actions -->
+        <CommandBar
+            Grid.Row="3"
+            Margin="0,12,0,0"
+            HorizontalAlignment="Left"
+            Background="Transparent"
+            DefaultLabelPosition="Right">
+            <AppBarButton
+                x:Name="RunSyncBtn"
+                Icon="Sync"
+                Label="今すぐ同期"
+                Click="RunSyncBtn_Click" />
+            <AppBarButton
+                x:Name="ClearLogBtn"
+                Icon="Delete"
+                Label="ログをクリア"
+                Click="ClearLogBtn_Click" />
+        </CommandBar>
+    </Grid>
+</Page>

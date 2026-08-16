@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="GPUAssign.Pages.BackupPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:GPUAssign.Pages"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Background="Transparent"
+    mc:Ignorable="d">
+
+    <Grid Margin="24,20,24,24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,4">
+            <TextBlock
+                x:Name="PageTitleText"
+                Style="{StaticResource TitleTextBlockStyle}"
+                Text="バックアップ &amp; 復元"
+                Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+            <TextBlock
+                x:Name="PageSubtitleText"
+                Margin="0,4,0,0"
+                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                Text="GPU設定を変更する前に必ずバックアップを作成することをお勧めします" />
+        </StackPanel>
+
+        <!-- Status -->
+        <InfoBar
+            x:Name="StatusBar"
+            Grid.Row="1"
+            Margin="0,12,0,0"
+            IsClosable="True"
+            IsOpen="False" />
+
+        <!-- Info card -->
+        <Border
+            Grid.Row="2"
+            Margin="0,16,0,0"
+            Padding="16"
+            CornerRadius="8"
+            Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+            BorderThickness="1">
+            <StackPanel Spacing="8">
+                <TextBlock x:Name="InfoCardTitleText" FontWeight="SemiBold" Text="バックアップについて" />
+                <TextBlock
+                    x:Name="InfoCardBodyText"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    TextWrapping="Wrap"
+                    Text="バックアップはWindowsのGPU設定レジストリ全体を .reg ファイルとして保存します。復元することで、同期前の状態に戻すことができます。" />
+            </StackPanel>
+        </Border>
+
+        <!-- Backup list -->
+        <ListView
+            x:Name="BackupListView"
+            Grid.Row="3"
+            Margin="0,16,0,0"
+            SelectionMode="Single">
+
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    <Setter Property="Padding" Value="12,10" />
+                    <Setter Property="CornerRadius" Value="8" />
+                    <Setter Property="Margin" Value="0,2" />
+                </Style>
+            </ListView.ItemContainerStyle>
+
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="local:BackupEntry">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Grid.Column="0">
+                            <TextBlock FontWeight="SemiBold" Text="{x:Bind DisplayName}" />
+                            <TextBlock
+                                FontSize="12"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="{x:Bind FileSizeLabel}" />
+                        </StackPanel>
+
+                        <Button
+                            Grid.Column="1"
+                            Margin="0,0,8,0"
+                            Content="復元"
+                            Tag="{x:Bind FilePath}"
+                            Click="RestoreButton_Click" />
+
+                        <Button
+                            Grid.Column="2"
+                            Content="削除"
+                            Tag="{x:Bind FilePath}"
+                            Click="DeleteBackupButton_Click" />
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <!-- Actions -->
+        <CommandBar
+            Grid.Row="4"
+            Margin="0,12,0,0"
+            HorizontalAlignment="Left"
+            Background="Transparent"
+            DefaultLabelPosition="Right">
+            <AppBarButton
+                x:Name="BackupNowBtn"
+                Icon="Save"
+                Label="今すぐバックアップ"
+                Click="BackupNowButton_Click" />
+            <AppBarButton
+                x:Name="RefreshBtn"
+                Icon="Refresh"
+                Label="更新"
+                Click="RefreshButton_Click" />
+        </CommandBar>
+    </Grid>
+</Page>

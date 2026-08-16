@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "GPUAssign (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "GPUAssign (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

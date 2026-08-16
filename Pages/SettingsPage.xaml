@@ -1,0 +1,305 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="GPUAssign.Pages.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:local="using:GPUAssign.Pages"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    Background="Transparent"
+    mc:Ignorable="d">
+
+    <ScrollViewer>
+        <StackPanel Margin="24,20,24,24" Spacing="16" MaxWidth="680">
+
+            <!-- Header -->
+            <StackPanel Margin="0,0,0,4">
+                <TextBlock
+                    x:Name="PageTitleText"
+                    Style="{StaticResource TitleTextBlockStyle}"
+                    Text="設定"
+                    Foreground="{ThemeResource TextFillColorPrimaryBrush}" />
+                <TextBlock
+                    x:Name="PageSubtitleText"
+                    Margin="0,4,0,0"
+                    Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                    Text="GPU Assign の動作設定" />
+            </StackPanel>
+
+            <!-- Status -->
+            <InfoBar
+                x:Name="StatusBar"
+                IsClosable="True"
+                IsOpen="False" />
+
+            <!-- Appearance Section -->
+            <TextBlock
+                x:Name="SectionAppearanceText"
+                FontSize="13"
+                FontWeight="SemiBold"
+                Text="外観"
+                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+
+            <Border
+                Padding="16"
+                CornerRadius="8"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1">
+                <StackPanel Spacing="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock x:Name="ThemeLabelText" FontWeight="SemiBold" Text="テーマ" />
+                            <TextBlock
+                                x:Name="ThemeDescText"
+                                FontSize="12"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="アプリケーションの外観テーマを選択します" />
+                        </StackPanel>
+                        <ComboBox
+                            x:Name="ThemeComboBox"
+                            Grid.Column="1"
+                            Width="160"
+                            SelectionChanged="ThemeComboBox_SelectionChanged">
+                            <ComboBoxItem x:Name="ThemeSystemItem" Content="システムに従う" Tag="System" />
+                            <ComboBoxItem x:Name="ThemeLightItem" Content="ライト" Tag="Light" />
+                            <ComboBoxItem x:Name="ThemeDarkItem" Content="ダーク" Tag="Dark" />
+                        </ComboBox>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Language Section -->
+            <TextBlock
+                x:Name="SectionLanguageText"
+                FontSize="13"
+                FontWeight="SemiBold"
+                Text="言語"
+                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+
+            <Border
+                Padding="16"
+                CornerRadius="8"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1">
+                <StackPanel Spacing="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock x:Name="LanguageLabelText" FontWeight="SemiBold" Text="表示言語" />
+                            <TextBlock
+                                x:Name="LanguageDescText"
+                                FontSize="12"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="UIの表示言語を選択します (JSONファイル管理)" />
+                        </StackPanel>
+                        <ComboBox
+                            x:Name="LanguageComboBox"
+                            Grid.Column="1"
+                            Width="160"
+                            SelectionChanged="LanguageComboBox_SelectionChanged">
+                            <ComboBoxItem x:Name="LangAutoItem" Content="自動 (OSに従う)" Tag="auto" />
+                            <ComboBoxItem Content="日本語 (ja-JP)" Tag="ja-JP" />
+                            <ComboBoxItem Content="English (en-US)" Tag="en-US" />
+                        </ComboBox>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Performance / Threads Section -->
+            <TextBlock
+                x:Name="SectionPerformanceText"
+                FontSize="13"
+                FontWeight="SemiBold"
+                Text="パフォーマンス &amp; 同期"
+                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+
+            <Border
+                Padding="16"
+                CornerRadius="8"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1">
+                <StackPanel Spacing="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock x:Name="ThreadsLabelText" FontWeight="SemiBold" Text="並列スレッド数" />
+                            <TextBlock
+                                x:Name="ThreadsDescText"
+                                FontSize="12"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="EXE探索を並列処理するスレッド数 (デフォルト: 4)" />
+                        </StackPanel>
+                        <ComboBox
+                            x:Name="ThreadsComboBox"
+                            Grid.Column="1"
+                            Width="160"
+                            SelectionChanged="ThreadsComboBox_SelectionChanged">
+                            <ComboBoxItem Content="1 (シングルスレッド)" Tag="1" />
+                            <ComboBoxItem Content="2 スレッド" Tag="2" />
+                            <ComboBoxItem Content="4 スレッド (推奨)" Tag="4" />
+                            <ComboBoxItem Content="8 スレッド (高速)" Tag="8" />
+                            <ComboBoxItem Content="16 スレッド (最大)" Tag="16" />
+                        </ComboBox>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Auto sync section -->
+            <TextBlock
+                x:Name="SectionAutoSyncText"
+                FontSize="13"
+                FontWeight="SemiBold"
+                Text="自動同期"
+                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+
+            <Border
+                Padding="16"
+                CornerRadius="8"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1">
+                <StackPanel Spacing="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock x:Name="AutoStartLabelText" FontWeight="SemiBold" Text="Windowsログオン時に自動同期" />
+                            <TextBlock
+                                x:Name="AutoStartDescText"
+                                FontSize="12"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                Text="ログオン後30秒後にGPU設定を自動更新します" />
+                        </StackPanel>
+                        <ToggleSwitch
+                            x:Name="AutoStartToggle"
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Toggled="AutoStartToggle_Toggled" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Cleanup section -->
+            <TextBlock
+                x:Name="SectionCleanupText"
+                FontSize="13"
+                FontWeight="SemiBold"
+                Text="古い設定の整理"
+                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+
+            <Border
+                Padding="16"
+                CornerRadius="8"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1">
+                <StackPanel Spacing="16">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock x:Name="AutoCleanupLabelText" FontWeight="SemiBold" Text="古いEXE設定を自動削除" />
+                            <TextBlock
+                                x:Name="AutoCleanupDescText"
+                                FontSize="12"
+                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                                TextWrapping="Wrap"
+                                Text="同期時に古いバージョンのEXEに対応するGPU設定を自動的にレジストリから削除します" />
+                        </StackPanel>
+                        <ToggleSwitch
+                            x:Name="AutoCleanupToggle"
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            Toggled="AutoCleanupToggle_Toggled" />
+                    </Grid>
+
+                    <Button
+                        x:Name="CleanupNowButton"
+                        Content="今すぐ古い設定を整理"
+                        Click="CleanupNowButton_Click" />
+                </StackPanel>
+            </Border>
+
+            <!-- Data section -->
+            <TextBlock
+                x:Name="SectionDataText"
+                FontSize="13"
+                FontWeight="SemiBold"
+                Text="データ"
+                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+
+            <Border
+                Padding="16"
+                CornerRadius="8"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1">
+                <StackPanel Spacing="12">
+                    <StackPanel>
+                        <TextBlock x:Name="ConfigPathLabelText" FontWeight="SemiBold" Text="設定ファイルの場所" />
+                        <TextBlock
+                            x:Name="ConfigPathText"
+                            FontSize="12"
+                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                            IsTextSelectionEnabled="True"
+                            TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <Button
+                        x:Name="OpenFolderButton"
+                        Content="設定フォルダを開く"
+                        Click="OpenConfigFolderButton_Click" />
+                </StackPanel>
+            </Border>
+
+            <!-- About section -->
+            <TextBlock
+                x:Name="SectionAboutText"
+                FontSize="13"
+                FontWeight="SemiBold"
+                Text="バージョン情報"
+                Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}" />
+
+            <Border
+                Padding="16"
+                CornerRadius="8"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1">
+                <StackPanel Spacing="4">
+                    <TextBlock FontWeight="SemiBold" Text="GPU Assign (ポータブル版)" />
+                    <TextBlock
+                        x:Name="AboutVersionText"
+                        FontSize="12"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        Text="バージョン 1.0.0" />
+                    <TextBlock
+                        x:Name="AboutDescText"
+                        Margin="0,8,0,0"
+                        FontSize="12"
+                        Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                        TextWrapping="Wrap"
+                        Text="Windows のアプリごとGPU設定をバージョンアップデートに追従させるツールです。" />
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</Page>
