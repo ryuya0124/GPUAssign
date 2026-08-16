@@ -34,6 +34,7 @@ public sealed partial class AppsPage : Page
 
         SyncButton.Label = L.Get("action.sync");
         AddButton.Label = L.Get("action.add");
+        ImportExistingButton.Label = "Windows設定からインポート";
         CatalogButton.Label = L.Get("action.addFromCatalog");
         OpenFolderButton.Label = "フォルダを開く";
         EditButton.Label = L.Get("action.edit");
@@ -111,7 +112,6 @@ public sealed partial class AppsPage : Page
         {
             var progress = new Progress<string>(msg =>
             {
-                // Dispatched to UI thread safely
                 ShowStatus(InfoBarSeverity.Informational, L.Get("sync.syncing"), msg);
             });
 
@@ -147,6 +147,46 @@ public sealed partial class AppsPage : Page
         {
             SyncProgressBar.Visibility = Visibility.Collapsed;
             SyncButton.IsEnabled = true;
+        }
+    }
+
+    // ---- Import Existing Windows Graphics Settings ----
+
+    private async void ImportExistingButton_Click(object sender, RoutedEventArgs e)
+    {
+        var detected = GpuPreferenceService.ScanExistingWindowsPreferences();
+
+        // Filter out apps already managed in GPU Assign (by ExeName or Name)
+        var managedExeNames = _config.Apps.Select(a => a.ExeName).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var unmanaged = detected.Where(d => !managedExeNames.Contains(d.ExeName)).ToList();
+
+        if (unmanaged.Count == 0)
+        {
+            ShowStatus(InfoBarSeverity.Informational, "Windows既存設定からインポート",
+                detected.Count == 0
+                    ? "Windowsのグラフィックス設定に登録されているアプリは見つかりませんでした。"
+                    : "Windowsグラフィックス設定のすべてのアプリが既に取り込み済みです。");
+            return;
+        }
+
+        var dialog = new ImportExistingDialog(unmanaged)
+        {
+            XamlRoot = XamlRoot
+        };
+
+        var result = await dialog.ShowAsync();
+        if (result == ContentDialogResult.Primary && dialog.SelectedApps.Count > 0)
+        {
+            foreach (var app in dialog.SelectedApps)
+            {
+                _config.Apps.Add(app);
+                AppItems.Add(app);
+            }
+            ConfigService.Save(_config);
+            EmptyStatePanel.Visibility = Visibility.Collapsed;
+            AppListView.Visibility = Visibility.Visible;
+
+            ShowStatus(InfoBarSeverity.Success, "インポート完了", $"{dialog.SelectedApps.Count} 件のアプリをWindows設定から取り込みました。");
         }
     }
 

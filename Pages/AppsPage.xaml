@@ -29,7 +29,7 @@
                 x:Name="PageSubtitleText"
                 Margin="0,4,0,0"
                 Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                Text="EXEのバージョンに依存しないGPU設定を管理します" />
+                Text="EXEのバージョンに依存しないGPU割り当てルールを管理します" />
         </StackPanel>
 
         <!-- Status bar / info strip with progress bar -->
@@ -56,7 +56,7 @@
                 <FontIcon Glyph="&#xE74C;" FontSize="48" Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
                 <TextBlock
                     x:Name="EmptyStateText"
-                    Text="登録されているアプリがありません。「アプリ追加」から登録してください。"
+                    Text="登録されているアプリがありません。「アプリ追加」または「Windows設定からインポート」から登録してください。"
                     Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                     HorizontalAlignment="Center" />
             </StackPanel>
@@ -176,6 +176,11 @@
                 Icon="Add"
                 Label="アプリ追加"
                 Click="AddButton_Click" />
+            <AppBarButton
+                x:Name="ImportExistingButton"
+                Icon="Import"
+                Label="Windows設定からインポート"
+                Click="ImportExistingButton_Click" />
             <AppBarButton
                 x:Name="CatalogButton"
                 Icon="Shop"
