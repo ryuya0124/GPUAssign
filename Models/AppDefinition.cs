@@ -53,6 +53,7 @@ public enum SyncStatus
 /// </summary>
 public class AppDefinition : INotifyPropertyChanged
 {
+    public override string ToString() => Name;
     public event PropertyChangedEventHandler? PropertyChanged;
     private void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));

@@ -5,8 +5,8 @@
   <trustInfo xmlns="urn:schemas-microsoft-com:asm.v2">
     <security>
       <requestedPrivileges xmlns="urn:schemas-microsoft-com:asm.v3">
-        <!-- 起動時に管理者権限を要求 (ポータブル/システム設定管理) -->
-        <requestedExecutionLevel level="requireAdministrator" uiAccess="false" />
+        <!-- GPU preferences belong to HKCU and do not require elevation. -->
+        <requestedExecutionLevel level="asInvoker" uiAccess="false" />
       </requestedPrivileges>
     </security>
   </trustInfo>

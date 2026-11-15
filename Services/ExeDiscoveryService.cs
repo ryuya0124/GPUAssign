@@ -79,15 +79,7 @@ public static class ExeDiscoveryService
         var basePath = ExpandPath(app.SearchPath);
         if (!Directory.Exists(basePath)) return new List<string>();
 
-        var option = app.Recursive ? SearchOption.AllDirectories : SearchOption.TopDirectoryOnly;
-        try
-        {
-            return Directory.EnumerateFiles(basePath, app.ExeName, option).ToList();
-        }
-        catch (UnauthorizedAccessException)
-        {
-            return SafeEnumerate(basePath, app.ExeName, app.Recursive);
-        }
+        return SafeEnumerate(basePath, app.ExeName, app.Recursive);
     }
 
     private static List<string> FindGlob(AppDefinition app)
@@ -138,7 +130,7 @@ public static class ExeDiscoveryService
             // Match inside each subdirectory
             try
             {
-                foreach (var sub in Directory.EnumerateDirectories(current))
+                foreach (var sub in Directory.EnumerateDirectories(current, "*", SafeOptions(false)))
                     GlobSearch(results, sub, segments, idx, exeName);   // stay on **
             }
             catch { }
@@ -149,7 +141,7 @@ public static class ExeDiscoveryService
         if (string.IsNullOrEmpty(current)) return;
         try
         {
-            foreach (var sub in Directory.EnumerateDirectories(current, seg))
+            foreach (var sub in Directory.EnumerateDirectories(current, seg, SafeOptions(false)))
                 GlobSearch(results, sub, segments, idx + 1, exeName);
         }
         catch { }
@@ -171,15 +163,19 @@ public static class ExeDiscoveryService
         if (!Directory.Exists(basePath)) return new List<string>();
 
         Regex rx;
-        try { rx = new Regex(app.ExeName, RegexOptions.IgnoreCase | RegexOptions.Compiled); }
+        try { rx = new Regex(app.ExeName, RegexOptions.IgnoreCase, TimeSpan.FromMilliseconds(200)); }
         catch { return new List<string>(); }
 
         var allFiles = SafeEnumerate(basePath, "*", recursive: true);
-        return allFiles.Where(f =>
+        try
         {
-            var relative = f.Substring(Math.Min(basePath.Length + 1, f.Length));
-            return rx.IsMatch(relative);
-        }).ToList();
+            return allFiles.Where(f => rx.IsMatch(Path.GetRelativePath(basePath, f))).ToList();
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            // Reject the entire rule rather than returning a partial candidate list.
+            return new List<string>();
+        }
     }
 
     // ──────────────────────────────────────────────
@@ -219,22 +215,16 @@ public static class ExeDiscoveryService
 
     private static List<string> SafeEnumerate(string root, string pattern, bool recursive)
     {
-        var result = new List<string>();
-        var queue  = new Queue<string>();
-        queue.Enqueue(root);
-
-        while (queue.Count > 0)
-        {
-            var dir = queue.Dequeue();
-            try
-            {
-                result.AddRange(Directory.EnumerateFiles(dir, pattern));
-                if (!recursive) break;
-                foreach (var sub in Directory.EnumerateDirectories(dir))
-                    queue.Enqueue(sub);
-            }
-            catch (UnauthorizedAccessException) { }
-        }
-        return result;
+        try { return Directory.EnumerateFiles(root, pattern, SafeOptions(recursive)).ToList(); }
+        catch (IOException) { return new(); } // A directory may disappear during an update.
     }
+
+    private static EnumerationOptions SafeOptions(bool recursive) => new()
+    {
+        RecurseSubdirectories = recursive,
+        IgnoreInaccessible = true,
+        AttributesToSkip = FileAttributes.ReparsePoint,
+        MatchCasing = MatchCasing.CaseInsensitive,
+        MaxRecursionDepth = 128
+    };
 }

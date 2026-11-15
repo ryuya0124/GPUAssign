@@ -1,86 +1,77 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using Microsoft.Win32;
-using System.Reflection;
 
 namespace GPUAssign.Services;
 
-/// <summary>
-/// Manages Windows logon auto-start via a Task Scheduler task (preferred)
-/// or the Registry Run key as fallback.
-/// </summary>
+/// <summary>Current-user startup; syncing HKCU never needs administrator privileges.</summary>
 public static class StartupService
 {
     private const string TaskName = "GPUAssignAutoSync";
     private const string RunKeyName = "GPUAssign";
     private const string RunKeyPath = @"Software\Microsoft\Windows\CurrentVersion\Run";
 
-    /// <summary>Register the app to run at logon using Task Scheduler via schtasks.exe.</summary>
     public static void EnableStartupTask(string exePath)
     {
-        // Use schtasks to create an on-logon task that runs with /silent flag
-        var args = $"/Create /F /TN \"{TaskName}\" /TR \"\\\"{exePath}\\\" /silent\" " +
-                   "/SC ONLOGON /RL HIGHEST /DELAY 0000:30";
+        if (!Path.IsPathFullyQualified(exePath) || !File.Exists(exePath))
+            throw new FileNotFoundException("GPU Assign executable was not found.", exePath);
 
-        RunProcess("schtasks.exe", args);
+        var result = RunTask("/Create", "/F", "/TN", TaskName, "/TR", $"\"{exePath}\" /silent",
+            "/SC", "ONLOGON", "/RL", "LIMITED", "/DELAY", "0000:30");
+        if (result.ExitCode == 0)
+        {
+            using var runKey = Registry.CurrentUser.OpenSubKey(RunKeyPath, true);
+            runKey?.DeleteValue(RunKeyName, false);
+            return;
+        }
+
+        // A standard user may not create logon triggers. Avoid duplicate startup.
+        if (HasScheduledTask()) throw new InvalidOperationException(result.Error);
+        using var key = Registry.CurrentUser.CreateSubKey(RunKeyPath);
+        key.SetValue(RunKeyName, $"\"{exePath}\" /silent");
     }
 
     public static void DisableStartupTask()
     {
-        try { RunProcess("schtasks.exe", $"/Delete /TN \"{TaskName}\" /F"); }
-        catch { /* task might not exist */ }
-
-        try
+        if (HasScheduledTask())
         {
-            using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, true);
-            key?.DeleteValue(RunKeyName, false);
+            var result = RunTask("/Delete", "/TN", TaskName, "/F");
+            if (result.ExitCode != 0) throw new InvalidOperationException(result.Error);
         }
-        catch { /* ignore */ }
+        using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, true);
+        key?.DeleteValue(RunKeyName, false);
     }
 
     public static bool IsStartupEnabled()
     {
-        try
+        if (HasScheduledTask()) return true;
+        using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath);
+        return key?.GetValue(RunKeyName) is string value && !string.IsNullOrWhiteSpace(value);
+    }
+
+    private static bool HasScheduledTask() => RunTask("/Query", "/TN", TaskName).ExitCode == 0;
+
+    private static (int ExitCode, string Output, string Error) RunTask(params string[] args)
+    {
+        using var process = new Process
         {
-            var result = RunProcessWithOutput("schtasks.exe", $"/Query /TN \"{TaskName}\"");
-            return result.Contains(TaskName, StringComparison.OrdinalIgnoreCase);
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = Path.Combine(Environment.SystemDirectory, "schtasks.exe"),
+                UseShellExecute = false, CreateNoWindow = true,
+                RedirectStandardOutput = true, RedirectStandardError = true
+            }
+        };
+        foreach (var arg in args) process.StartInfo.ArgumentList.Add(arg);
+        process.Start();
+        var output = process.StandardOutput.ReadToEndAsync();
+        var error = process.StandardError.ReadToEndAsync();
+        if (!process.WaitForExit(10_000))
+        {
+            process.Kill();
+            throw new TimeoutException("Task Scheduler did not respond within 10 seconds.");
         }
-        catch { return false; }
-    }
-
-    // ---- helpers ----
-
-    private static void RunProcess(string exe, string args)
-    {
-        using var p = new System.Diagnostics.Process();
-        p.StartInfo = new System.Diagnostics.ProcessStartInfo
-        {
-            FileName  = exe,
-            Arguments = args,
-            UseShellExecute        = false,
-            CreateNoWindow         = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError  = true
-        };
-        p.Start();
-        p.WaitForExit(10_000);
-    }
-
-    private static string RunProcessWithOutput(string exe, string args)
-    {
-        using var p = new System.Diagnostics.Process();
-        p.StartInfo = new System.Diagnostics.ProcessStartInfo
-        {
-            FileName  = exe,
-            Arguments = args,
-            UseShellExecute        = false,
-            CreateNoWindow         = true,
-            RedirectStandardOutput = true,
-            RedirectStandardError  = true
-        };
-        p.Start();
-        var output = p.StandardOutput.ReadToEnd();
-        p.WaitForExit(10_000);
-        return output;
+        return (process.ExitCode, output.GetAwaiter().GetResult(), error.GetAwaiter().GetResult());
     }
 }

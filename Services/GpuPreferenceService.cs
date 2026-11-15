@@ -37,8 +37,12 @@ public static class GpuPreferenceService
     /// <summary>Write the GPU preference for the given EXE path or Store App ID.</summary>
     public static void SetPreference(string exePath, GpuPreference preference)
     {
+        if (!Enum.IsDefined(preference)) throw new ArgumentOutOfRangeException(nameof(preference));
         using var key = Registry.CurrentUser.CreateSubKey(RegKeyPath, writable: true);
-        var value = FormatPreference(preference);
+        // Windows stores Auto HDR / windowed optimizations in the same value.
+        var fields = (key.GetValue(exePath) as string ?? "").Split(';', StringSplitOptions.RemoveEmptyEntries)
+            .Where(field => !field.TrimStart().StartsWith("GpuPreference=", StringComparison.OrdinalIgnoreCase));
+        var value = string.Join(';', fields.Append($"GpuPreference={(int)preference}")) + ";";
         key.SetValue(exePath, value, RegistryValueKind.String);
     }
 
@@ -246,7 +250,7 @@ public static class GpuPreferenceService
         if (!string.IsNullOrEmpty(appData) && path.StartsWith(appData, StringComparison.OrdinalIgnoreCase))
             return "%APPDATA%" + path.Substring(appData.Length);
 
-        if (!string.IsNullOrEmpty(progFiles) && path.StartsWith(progFiles, StringComparison.OrdinalIgnoreCase))
+        if (!string.IsNullOrEmpty(progFiles) && (path.Equals(progFiles, StringComparison.OrdinalIgnoreCase) || path.StartsWith(progFiles + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)))
             return "%PROGRAMFILES%" + path.Substring(progFiles.Length);
 
         if (!string.IsNullOrEmpty(progFilesX86) && path.StartsWith(progFilesX86, StringComparison.OrdinalIgnoreCase))
@@ -272,7 +276,7 @@ public static class GpuPreferenceService
                 {
                     var raw = key.GetValue(name) as string;
                     var escapedName = name.Replace("\\", "\\\\").Replace("\"", "\\\"");
-                    var escapedVal  = (raw ?? string.Empty).Replace("\\", "\\\\");
+                    var escapedVal  = EscapeRegString(raw ?? string.Empty);
                     sb.AppendLine($"\"{escapedName}\"=\"{escapedVal}\"");
                 }
             }
@@ -285,20 +289,34 @@ public static class GpuPreferenceService
     /// <summary>Import (restore) a .reg export string, overwriting affected values.</summary>
     public static void ImportFromReg(string regContent)
     {
-        using var key = Registry.CurrentUser.CreateSubKey(RegKeyPath, writable: true);
+        // Validate all values before changing the registry, and accept only this key.
+        var values = new List<(string Name, string Value)>();
+        bool inGpuKey = false;
         foreach (var line in regContent.Split('\n'))
         {
             var trimmed = line.Trim();
+            if (trimmed.StartsWith('['))
+            {
+                inGpuKey = trimmed.Equals($"[HKEY_CURRENT_USER\\{RegKeyPath}]", StringComparison.OrdinalIgnoreCase);
+                continue;
+            }
+            if (!inGpuKey) continue;
             if (!trimmed.StartsWith('"')) continue;
 
             var eqIdx = trimmed.IndexOf("\"=\"", StringComparison.Ordinal);
             if (eqIdx < 0) continue;
 
-            var name  = trimmed[1..eqIdx].Replace("\\\\", "\\").Replace("\\\"", "\"");
-            var value = trimmed[(eqIdx + 3)..].TrimEnd('"', '\r').Replace("\\\\", "\\");
+            if (!trimmed.EndsWith('"')) continue;
+            var name = UnescapeRegString(trimmed[1..eqIdx]);
+            var value = UnescapeRegString(trimmed[(eqIdx + 3)..^1]);
 
-            key.SetValue(name, value, RegistryValueKind.String);
+            if (name.Contains('\n') || name.Contains('\r') || value.Contains('\n') || value.Contains('\r'))
+                throw new InvalidDataException("Invalid registry backup value.");
+            values.Add((name, value));
         }
+        if (values.Count == 0) throw new InvalidDataException("The backup contains no GPU preference values.");
+        using var key = Registry.CurrentUser.CreateSubKey(RegKeyPath, writable: true);
+        foreach (var (name, value) in values) key.SetValue(name, value, RegistryValueKind.String);
     }
 
     // ---- helpers ----
@@ -306,11 +324,21 @@ public static class GpuPreferenceService
     private static GpuPreference? ParsePreference(string? raw)
     {
         if (string.IsNullOrEmpty(raw)) return null;
-        var match = Regex.Match(raw, @"GpuPreference=(\d)");
+        var match = Regex.Match(raw, @"(?:^|;)\s*GpuPreference=([0-2])(?:;|$)", RegexOptions.IgnoreCase);
         if (!match.Success) return null;
         return (GpuPreference)int.Parse(match.Groups[1].Value);
     }
 
-    private static string FormatPreference(GpuPreference pref)
-        => $"GpuPreference={(int)pref};";
+    private static string EscapeRegString(string value) => value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+
+    private static string UnescapeRegString(string value)
+    {
+        var result = new System.Text.StringBuilder();
+        for (int i = 0; i < value.Length; i++)
+        {
+            if (value[i] == '\\' && i + 1 < value.Length && (value[i + 1] == '\\' || value[i + 1] == '"')) i++;
+            result.Append(value[i]);
+        }
+        return result.ToString();
+    }
 }

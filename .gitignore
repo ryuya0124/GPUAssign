@@ -48,6 +48,8 @@ data/
 backups/
 *.reg
 sync_log.json
+apps.json
+apps.json.*.tmp
 
 # Code analysis and tooling
 _ReSharper*/

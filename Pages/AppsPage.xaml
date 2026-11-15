@@ -154,6 +154,7 @@
                                 Width="140"
                                 VerticalAlignment="Center"
                                 SelectedIndex="{x:Bind GpuIndex, Mode=TwoWay}"
+                                Loaded="RowGpuComboBox_Loaded"
                                 SelectionChanged="RowGpuComboBox_SelectionChanged"
                                 Tag="{x:Bind}">
                                 <ComboBoxItem Content="システム既定" />

@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net11.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../Models/*.cs" Link="Models/%(Filename)%(Extension)" />
+    <Compile Include="../../Services/ExeDiscoveryService.cs" Link="ExeDiscoveryService.cs" />
+    <Compile Include="../../Services/GpuPreferenceService.cs" Link="GpuPreferenceService.cs" />
+    <Compile Include="../../Services/ConfigService.cs" Link="ConfigService.cs" />
+    <Compile Include="../../Services/SyncService.cs" Link="SyncService.cs" />
+    <Compile Include="../../Services/LocalizationService.cs" Link="LocalizationService.cs" />
+  </ItemGroup>
+</Project>

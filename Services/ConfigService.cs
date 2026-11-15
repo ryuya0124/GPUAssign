@@ -13,6 +13,8 @@ namespace GPUAssign.Services;
 /// </summary>
 public static class ConfigService
 {
+    private static readonly object Gate = new();
+    private static AppConfig? _current;
     /// <summary>
     /// Base directory of the running executable.
     /// Everything is stored here for complete portability.
@@ -31,25 +33,35 @@ public static class ConfigService
 
     public static AppConfig Load()
     {
-        try
+        lock (Gate)
         {
+            if (_current != null) return _current;
             if (File.Exists(ConfigFilePath))
             {
                 var json = File.ReadAllText(ConfigFilePath);
-                return JsonSerializer.Deserialize<AppConfig>(json, JsonOptions) ?? new AppConfig();
+                var config = JsonSerializer.Deserialize<AppConfig>(json, JsonOptions)
+                    ?? throw new InvalidDataException("apps.json must contain a configuration object.");
+                if (config.Apps == null || config.Apps.Any(app => app == null))
+                    throw new InvalidDataException("apps.json contains an invalid app list.");
+                foreach (var app in config.Apps) app.ManagedPaths ??= new();
+                return _current = config;
             }
+            return _current = new AppConfig();
         }
-        catch { /* ignore */ }
-
-        return new AppConfig();
     }
 
     public static void Save(AppConfig config)
     {
-        try
+        lock (Gate)
         {
-            File.WriteAllText(ConfigFilePath, JsonSerializer.Serialize(config, JsonOptions));
+            string temp = ConfigFilePath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
+            {
+                File.WriteAllText(temp, JsonSerializer.Serialize(config, JsonOptions));
+                File.Move(temp, ConfigFilePath, overwrite: true);
+                _current = config;
+            }
+            finally { if (File.Exists(temp)) File.Delete(temp); }
         }
-        catch { /* best effort */ }
     }
 }

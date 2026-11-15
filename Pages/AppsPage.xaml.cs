@@ -105,21 +105,41 @@ public sealed partial class AppsPage : Page
 
     // ---- Inline GPU ComboBox Selection Changed ----
 
+    private void RowGpuComboBox_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is not ComboBox cb) return;
+        var keys = new[] { "gpu.default", "gpu.powerSaving", "gpu.high" };
+        for (int i = 0; i < keys.Length; i++)
+            if (cb.Items[i] is ComboBoxItem item) item.Content = L.Get(keys[i]);
+        Microsoft.UI.Xaml.Automation.AutomationProperties.SetName(cb, cb.Tag is AppDefinition app ? app.Name + " GPU" : "GPU");
+    }
+
     private void RowGpuComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (sender is ComboBox cb && cb.Tag is AppDefinition app)
+        if (sender is ComboBox cb && cb.IsLoaded && cb.SelectedIndex >= 0 && cb.Tag is AppDefinition app)
         {
-            ConfigService.Save(_config);
-
+            // x:Bind's source update can run after this event handler. Use the
+            // control's actual selection before persisting or writing Windows.
+            app.GpuIndex = cb.SelectedIndex;
             var targetKey = app.IsStoreApp ? app.ExeName : app.CurrentExePath;
-            if (!string.IsNullOrEmpty(targetKey) && (app.IsStoreApp || File.Exists(targetKey)))
+            try
             {
-                try
+                ConfigService.Save(_config);
+                if (!string.IsNullOrEmpty(targetKey) && (app.IsStoreApp || File.Exists(targetKey)))
                 {
-                    GpuPreferenceService.SetPreference(targetKey, app.GpuPreference);
+                    if (GpuPreferenceService.GetPreference(targetKey) != app.GpuPreference)
+                    {
+                        BackupService.CreateBackup();
+                        GpuPreferenceService.SetPreference(targetKey, app.GpuPreference);
+                    }
                     app.SyncStatus = SyncStatus.Synced;
                 }
-                catch { }
+            }
+            catch (Exception ex)
+            {
+                app.SyncStatus = SyncStatus.Error;
+                app.SyncMessage = ex.Message;
+                ShowStatus(InfoBarSeverity.Error, L.Get("status.error"), ex.Message);
             }
         }
     }
@@ -177,6 +197,7 @@ public sealed partial class AppsPage : Page
 
         try
         {
+            BackupService.CreateBackup();
             var progress = new Progress<string>(msg =>
             {
                 ShowStatus(InfoBarSeverity.Informational, L.Get("sync.syncing"), msg);

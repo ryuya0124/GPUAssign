@@ -15,7 +15,7 @@ public static class BackupService
     {
         Directory.CreateDirectory(BackupDir);
 
-        var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss");
+        var timestamp = DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss-fffffff") + "_" + Guid.NewGuid().ToString("N")[..8];
         var filePath  = Path.Combine(BackupDir, $"{timestamp}.reg");
 
         var content = GpuPreferenceService.ExportToReg();

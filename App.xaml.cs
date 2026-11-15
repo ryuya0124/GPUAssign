@@ -3,6 +3,8 @@ using System.Linq;
 using GPUAssign.Models;
 using GPUAssign.Services;
 using Microsoft.UI.Xaml;
+using Microsoft.UI.Xaml.Controls;
+using System.Runtime.InteropServices;
 
 namespace GPUAssign;
 
@@ -20,6 +22,23 @@ public partial class App : Application
     public App()
     {
         InitializeComponent();
+        UnhandledException += async (_, e) =>
+        {
+            e.Handled = true;
+            if (_window?.Content is FrameworkElement root && root.XamlRoot != null)
+            {
+                try
+                {
+                    await new ContentDialog
+                    {
+                        Title = L.Get("status.error"), Content = e.Exception.Message,
+                        CloseButtonText = L.Get("action.close"), XamlRoot = root.XamlRoot
+                    }.ShowAsync();
+                }
+                catch { ShowStartupError(e.Exception.Message); }
+            }
+            else ShowStartupError(e.Exception.Message);
+        };
     }
 
     /// <summary>
@@ -28,7 +47,17 @@ public partial class App : Application
     /// </summary>
     protected override async void OnLaunched(Microsoft.UI.Xaml.LaunchActivatedEventArgs args)
     {
-        var config = ConfigService.Load();
+        AppConfig config;
+        try { config = ConfigService.Load(); }
+        catch (Exception ex)
+        {
+            // Never replace a damaged or unreadable personal configuration.
+            if (!Environment.GetCommandLineArgs().Any(a => a.Equals("/silent", StringComparison.OrdinalIgnoreCase)))
+                ShowStartupError($"{ConfigService.ConfigFilePath}\n\n{ex.Message}");
+            Environment.ExitCode = 1;
+            Exit();
+            return;
+        }
 
         // Initialize localization
         LocalizationService.Initialize(config.Language);
@@ -53,7 +82,7 @@ public partial class App : Application
                         r.ErrorMessage ?? (r.Changed ? $"更新 → {r.NewPath}" : "変更なし"));
                 }
             }
-            catch { /* silent, best-effort */ }
+            catch { Environment.ExitCode = 1; }
 
             Exit();
             return;
@@ -67,6 +96,11 @@ public partial class App : Application
 
         _window.Activate();
     }
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int MessageBox(IntPtr owner, string text, string caption, uint type);
+
+    private static void ShowStartupError(string message) => MessageBox(IntPtr.Zero, message, "GPU Assign", 0x10);
 
     public static void ApplyTheme(FrameworkElement? root, string theme)
     {

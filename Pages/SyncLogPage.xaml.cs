@@ -97,6 +97,7 @@ public sealed partial class SyncLogPage : Page
 
         try
         {
+            BackupService.CreateBackup();
             var progress = new Progress<string>(msg =>
                 StatusBar.Message = msg);
 

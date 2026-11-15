@@ -34,7 +34,7 @@ GPU Assign は、指定したディレクトリや検索ルールに基づいて
 - バージョンフォルダが含まれるパスは自動的に「最新バージョン」や「Glob」ルールへ変換して取り込み可能。
 
 ### 4. ログオン時自動同期（常駐なし）
-- Windows ログオンから 30 秒後にバックグラウンドで `/silent` モードを実行し、最新 EXE の検出とレジストリ更新を行って即座に終了します。常駐プロセスによるメモリ消費はありません。
+- タスクスケジューラではWindowsログオンから30秒後、通常ユーザー権限でタスクを作成できない環境では現在のユーザーのRunキーからログオン時にバックグラウンドで `/silent` モードを実行し、最新 EXE の検出とレジストリ更新を行って即座に終了します。常駐プロセスによるメモリ消費はありません。
 
 ### 5. レジストリのバックアップ & 復元
 - 同期処理前に Windows の GPU 設定レジストリ全体を `.reg` 形式でバックアップ。いつでも過去の状態へ復元できます。
@@ -47,18 +47,18 @@ GPU Assign は、指定したディレクトリや検索ルールに基づいて
 ## 動作要件
 
 - **OS**: Windows 10 (バージョン 1809 以降) / Windows 11 (64-bit)
-- **権限**: 管理者権限（DirectX レジストリおよびタスクスケジューラ操作のため、起動時に UAC 昇格を要求します）
+- **権限**: 通常ユーザー権限（GPU設定は現在のユーザーのHKCUに保存します）
 - **ランタイム**:
   - **同梱版 (Self-Contained)**: 追加インストール不要
-  - **非同梱版 (Framework-Dependent)**: [.NET 9 Desktop Runtime (x64)](https://dotnet.microsoft.com/download/dotnet/9.0)
+  - **非同梱版 (Framework-Dependent)**: [.NET 11 Runtime (x64)](https://dotnet.microsoft.com/download/dotnet/11.0)
 
 ---
 
 ## ビルドとパッケージング
 
 ### 前提条件
-- .NET 9 SDK
-- Visual Studio 2022 (C++ によるデスクトップ開発ワークロード) または MSBuild Tools
+- .NET 11 SDK
+- Windows SDK（Windows App SDK 2.6.5をNuGetから復元）
 
 ### ビルドコマンド
 ```cmd
@@ -90,3 +90,18 @@ build.cmd release
 ## ライセンス
 
 本プロジェクトは MIT License のもとで公開されています。
+
+## メンテナンスと検証
+
+UIはWinUI 3です。GPU設定の変更時にAuto HDR等のWindows設定を保持し、設定ファイルは一時ファイルを使って保存します。設定の読み書きに失敗した場合はエラーを表示し、不正な設定ファイルを空の設定で上書きしません。正規表現の探索には時間制限を設け、ディレクトリーの再解析ポイントを再帰探索しません。
+
+```powershell
+dotnet run --project Tests/CoreRegression -c Release
+dotnet list GPUAssign.csproj package --vulnerable --include-transitive
+```
+
+回帰テストは専用の一時ファイルとレジストリ値だけを使用し、終了時に既存のGPU設定が変わっていないことも検証します。WinUIの描画自体はこのテストには含みません。
+
+`packages.lock.json`で依存バージョンを固定し、既知のNuGet脆弱性を復元時のエラーにします。ReleaseのJSON保存を保護するため、リフレクション依存コードのトリミングは無効です。
+
+詳細は[メンテナンス記録](docs/MAINTENANCE_2026-11-15.md)を参照してください。

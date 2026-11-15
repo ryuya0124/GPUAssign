@@ -13,6 +13,25 @@ public sealed partial class MainWindow : Window
     {
         Current = this;
         InitializeComponent();
+        ExtendsContentIntoTitleBar = true;
+        SetTitleBar(AppTitleBar);
+        if (Content is FrameworkElement root)
+        {
+            void UpdateCaptionColors()
+            {
+                AppWindow.TitleBar.ButtonForegroundColor = root.ActualTheme == ElementTheme.Dark ? Microsoft.UI.Colors.White : Microsoft.UI.Colors.Black;
+                AppWindow.TitleBar.ButtonInactiveForegroundColor = Windows.UI.Color.FromArgb(255, 128, 128, 128);
+                AppWindow.TitleBar.ButtonBackgroundColor = Microsoft.UI.Colors.Transparent;
+            }
+            root.ActualThemeChanged += (_, _) => UpdateCaptionColors();
+            root.Loaded += (_, _) =>
+            {
+                UpdateCaptionColors();
+                double scale = root.XamlRoot.RasterizationScale;
+                var workArea = Microsoft.UI.Windowing.DisplayArea.GetFromWindowId(AppWindow.Id, Microsoft.UI.Windowing.DisplayAreaFallback.Primary).WorkArea;
+                AppWindow.Resize(new Windows.Graphics.SizeInt32(System.Math.Min(workArea.Width, (int)(1100 * scale)), System.Math.Min(workArea.Height, (int)(800 * scale))));
+            };
+        }
 
         UpdateLocalizedStrings();
         NavFrame.Navigate(typeof(AppsPage));

@@ -381,16 +381,14 @@ public sealed class AppEditDialog : ContentDialog
             Recursive  = _recursiveToggle.IsOn
         };
 
+        try
+        {
         var (bestMatch, allMatches) = await Task.Run(() =>
         {
             var matches = ExeDiscoveryService.FindAllMatches(tempApp);
             var best = ExeDiscoveryService.FindBestMatch(tempApp);
             return (best, matches);
         });
-
-        _testProgressRing.IsActive = false;
-        _testProgressRing.Visibility = Visibility.Collapsed;
-        _testDiscoveryBtn.IsEnabled = true;
 
         if (bestMatch != null)
         {
@@ -403,6 +401,17 @@ public sealed class AppEditDialog : ContentDialog
         {
             _testResultText.Text = L.Get("status.detectFailed");
             _testResultText.Foreground = new SolidColorBrush(Windows.UI.Color.FromArgb(255, 239, 68, 68));
+        }
+        }
+        catch (Exception ex)
+        {
+            _testResultText.Text = $"{L.Get("status.error")}: {ex.Message}";
+        }
+        finally
+        {
+            _testProgressRing.IsActive = false;
+            _testProgressRing.Visibility = Visibility.Collapsed;
+            _testDiscoveryBtn.IsEnabled = true;
         }
     }
 

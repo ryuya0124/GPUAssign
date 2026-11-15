@@ -43,8 +43,15 @@ public static class SyncService
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 progress?.Report(L.F("sync.progress", app.Name));
-                var exe = await Task.Run(() => ExeDiscoveryService.FindBestMatch(app), cancellationToken);
-                return (app, exe);
+                try
+                {
+                    var exe = await Task.Run(() => ExeDiscoveryService.FindBestMatch(app), cancellationToken);
+                    return (app, exe, error: (string?)null);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    return (app, exe: (string?)null, error: ex.Message);
+                }
             }
             finally
             {
@@ -56,9 +63,16 @@ public static class SyncService
 
         // Phase 2: Registry operations (serialized on caller thread for registry safety)
         var results = new List<AppSyncResult>();
-        foreach (var (app, bestExe) in discoveries)
+        foreach (var (app, bestExe, error) in discoveries)
         {
             cancellationToken.ThrowIfCancellationRequested();
+            if (error != null)
+            {
+                app.SyncStatus = SyncStatus.Error;
+                app.SyncMessage = error;
+                results.Add(new AppSyncResult(app.Name, false, app.CurrentExePath, null, new(), error));
+                continue;
+            }
             var result = ApplySync(app, bestExe, config.AutoCleanup);
             results.Add(result);
         }
@@ -113,6 +127,7 @@ public static class SyncService
                 return new AppSyncResult(app.Name, false, null, null, removedPaths, L.Get("sync.notFound"));
             }
 
+            var oldPath = app.CurrentExePath;
             app.CurrentExePath = bestExe;
 
             // Track this path
@@ -122,6 +137,10 @@ public static class SyncService
             // Check current registry state
             var currentPref = GpuPreferenceService.GetPreference(bestExe);
             bool needsUpdate = currentPref != app.GpuPreference;
+
+            // Keep the previous assignment intact if writing the new one fails.
+            if (needsUpdate)
+                GpuPreferenceService.SetPreference(bestExe, app.GpuPreference);
 
             // Cleanup stale entries
             if (autoCleanup)
@@ -139,15 +158,12 @@ public static class SyncService
                 }
             }
 
-            if (needsUpdate)
-                GpuPreferenceService.SetPreference(bestExe, app.GpuPreference);
-
             app.SyncStatus  = SyncStatus.Synced;
             app.SyncMessage = needsUpdate
                 ? L.F("sync.updatedTo", $"{Path.GetFileName(Path.GetDirectoryName(bestExe) ?? "")}/{Path.GetFileName(bestExe)}")
                 : L.Get("sync.unchanged");
 
-            return new AppSyncResult(app.Name, needsUpdate, null, bestExe, removedPaths, null);
+            return new AppSyncResult(app.Name, needsUpdate || removedPaths.Count > 0, oldPath, bestExe, removedPaths, null);
         }
         catch (Exception ex)
         {
